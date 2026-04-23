@@ -29,7 +29,7 @@ export default function HomeScreen({ navigation }: any) {
       <ScrollView>
         <View style={styles.header}>
           <Text style={styles.greeting}>안녕하세요 👋</Text>
-          <Text style={styles.mascot}>🦜 요할</Text>
+          <Text style={styles.mascot}>🦜 조잘재잘</Text>
         </View>
 
         <View style={styles.statsCard}>
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   greeting: { fontSize: 20, fontWeight: "bold", color: colors.textPrimary },
-  mascot: { fontSize: 16, color: colors.primary, fontWeight: "600" },
+  mascot: { fontSize: 18, color: colors.primary, fontWeight: "600" },
   statsCard: {
     margin: 16,
     padding: 16,
@@ -140,5 +140,5 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
   },
-  startButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  startButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
 });

@@ -6,6 +6,7 @@ import httpx
 import os
 from dotenv import load_dotenv
 from prompts import SYSTEM_PROMPTS, LEARNING_TYPE_LABELS
+from curriculum import get_level_prompt, CURRICULUM
 
 load_dotenv()
 
@@ -27,6 +28,8 @@ class ChatRequest(BaseModel):
     message: str
     learning_type: LearningType
     history: Optional[list[Message]] = []
+    level: Optional[int] = 1
+    day: Optional[int] = 1
 
 
 class ChatResponse(BaseModel):
@@ -45,40 +48,52 @@ app.add_middleware(
 )
 
 
+async def call_ollama(messages: list) -> str:
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        response = await client.post(
+            f"{OLLAMA_BASE_URL}/api/chat",
+            json={
+                "model": OLLAMA_MODEL,
+                "messages": messages,
+                "stream": False,
+                "options": {"num_ctx": NUM_CTX, "num_gpu": 99},
+            },
+        )
+        response.raise_for_status()
+        return response.json()["message"]["content"]
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
 
 
+@app.get("/curriculum")
+async def get_curriculum():
+    return {
+        level: {
+            "title": data["title"],
+            "grammar": data["grammar"],
+        }
+        for level, data in CURRICULUM.items()
+    }
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
-    system_prompt = SYSTEM_PROMPTS[req.learning_type]
+    if req.learning_type == "new_learning":
+        system_prompt = get_level_prompt(req.level or 1, req.day or 1)
+    else:
+        system_prompt = SYSTEM_PROMPTS[req.learning_type]
 
-    # 최근 10턴만 컨텍스트에 포함 (깔끔한 책상 원칙)
     recent_history = req.history[-10:] if req.history else []
-
     messages = [{"role": "system", "content": system_prompt}]
     for msg in recent_history:
         messages.append({"role": msg.role, "content": msg.content})
     messages.append({"role": "user", "content": req.message})
 
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f"{OLLAMA_BASE_URL}/api/chat",
-                json={
-                    "model": OLLAMA_MODEL,
-                    "messages": messages,
-                    "stream": False,
-                    "options": {
-                        "num_ctx": NUM_CTX,
-                        "num_gpu": 99,
-                    },
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-            reply = data["message"]["content"]
+        reply = await call_ollama(messages)
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Ollama 연결 실패: {str(e)}")
 
@@ -90,41 +105,27 @@ async def chat(req: ChatRequest):
 
 
 @app.post("/chat/start")
-async def chat_start(learning_type: LearningType):
-    """AI가 먼저 대화를 시작할 때 사용하는 엔드포인트"""
-    system_prompt = SYSTEM_PROMPTS[learning_type]
-
-    trigger = {
-        "greeting": "학생에게 스페인어로 먼저 인사를 건네세요. 지금 시간대에 맞는 인사를 사용하세요.",
-        "situational": "오늘의 상황 단어 학습을 시작하세요. 주제를 정하고 첫 번째 단어를 소개하세요.",
-        "new_learning": "오늘의 새 학습을 시작하세요. 오늘 배울 단어와 문법을 소개하세요.",
-        "review": "복습 퀴즈를 시작하세요. 첫 번째 문제를 내세요.",
-        "mistake_review": "오답 복습을 시작하세요. 이전에 어려워했던 내용부터 시작하세요.",
-        "diary": "일기 쓰기 시간을 시작하세요. 오늘 하루에 대해 스페인어로 써보도록 유도하세요.",
-    }
+async def chat_start(learning_type: LearningType, level: int = 1, day: int = 1):
+    if learning_type == "new_learning":
+        system_prompt = get_level_prompt(level, day)
+        trigger = f"지금 바로 레벨 {level} 수업을 위의 형식대로 시작해주세요."
+    else:
+        system_prompt = SYSTEM_PROMPTS[learning_type]
+        trigger = {
+            "greeting": "학생에게 스페인어로 먼저 인사를 건네세요. 지금 시간대에 맞는 인사를 사용하세요.",
+            "situational": "오늘의 상황 단어 학습을 시작하세요. 주제를 정하고 첫 번째 단어를 소개하세요.",
+            "review": "복습 퀴즈를 시작하세요. 첫 번째 문제를 내세요.",
+            "mistake_review": "오답 복습을 시작하세요. 이전에 어려워했던 내용부터 시작하세요.",
+            "diary": "일기 쓰기 시간을 시작하세요. 오늘 하루에 대해 스페인어로 써보도록 유도하세요.",
+        }[learning_type]
 
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": trigger[learning_type]},
+        {"role": "user", "content": trigger},
     ]
 
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f"{OLLAMA_BASE_URL}/api/chat",
-                json={
-                    "model": OLLAMA_MODEL,
-                    "messages": messages,
-                    "stream": False,
-                    "options": {
-                        "num_ctx": NUM_CTX,
-                        "num_gpu": 99,
-                    },
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-            reply = data["message"]["content"]
+        reply = await call_ollama(messages)
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Ollama 연결 실패: {str(e)}")
 

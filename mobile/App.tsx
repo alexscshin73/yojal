@@ -30,17 +30,17 @@ function TabNavigator() {
       <Tab.Screen
         name="홈"
         component={HomeScreen}
-        options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🏠</Text> }}
+        options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 26, color }}>🏠</Text> }}
       />
       <Tab.Screen
         name="기록"
         component={RecordsScreen}
-        options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📚</Text> }}
+        options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 26, color }}>📚</Text> }}
       />
       <Tab.Screen
         name="설정"
         component={SettingsScreen}
-        options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>⚙️</Text> }}
+        options={{ tabBarIcon: ({ color }) => <Text style={{ fontSize: 26, color }}>⚙️</Text> }}
       />
     </Tab.Navigator>
   );

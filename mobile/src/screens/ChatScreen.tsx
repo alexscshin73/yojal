@@ -54,8 +54,11 @@ function Bubble({ message, typeColor }: BubbleProps) {
 
 export default function ChatScreen({ route, navigation }: any) {
   const learningType: LearningType = route?.params?.learningType ?? "greeting";
+  const level: number = route?.params?.level ?? 1;
+  const day: number = route?.params?.day ?? 1;
   const typeColor = LEARNING_TYPE_COLORS[learningType];
   const typeLabel = LEARNING_TYPE_LABELS[learningType];
+  const levelLabel = learningType === "new_learning" ? ` Lv.${level}` : "";
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -70,7 +73,7 @@ export default function ChatScreen({ route, navigation }: any) {
   async function loadInitialMessage() {
     setLoading(true);
     try {
-      const reply = await startChat(learningType);
+      const reply = await startChat(learningType, level, day);
       setMessages([{ role: "assistant", content: reply }]);
     } catch (e) {
       setMessages([{ role: "assistant", content: "서버 연결에 실패했어요. 잠시 후 다시 시도해주세요." }]);
@@ -90,7 +93,7 @@ export default function ChatScreen({ route, navigation }: any) {
     setLoading(true);
 
     try {
-      const reply = await sendMessage(text, learningType, messages);
+      const reply = await sendMessage(text, learningType, messages, level, day);
       setMessages([...updatedHistory, { role: "assistant", content: reply }]);
     } catch {
       setMessages([...updatedHistory, { role: "assistant", content: "응답을 가져오지 못했어요. 다시 시도해주세요." }]);
@@ -107,7 +110,7 @@ export default function ChatScreen({ route, navigation }: any) {
           <Text style={styles.backText}>← 뒤로</Text>
         </TouchableOpacity>
         <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
-          <Text style={styles.typeBadgeText}>{typeLabel}</Text>
+          <Text style={styles.typeBadgeText}>{typeLabel}{levelLabel}</Text>
         </View>
         <TouchableOpacity onPress={() => setHintVisible(true)} style={styles.hintButton}>
           <Text style={styles.hintText}>? 힌트</Text>
@@ -205,16 +208,13 @@ const styles = StyleSheet.create({
   bubbleRow: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end" },
   aiBubbleRow: { justifyContent: "flex-start" },
   userBubbleRow: { justifyContent: "flex-end" },
-  mascot: { fontSize: 24, marginRight: 8, marginBottom: 2 },
-  bubble: { maxWidth: "78%", borderRadius: 16, padding: 12 },
+  mascot: { fontSize: 32, marginRight: 8, marginBottom: 2 },
+  bubble: { maxWidth: "92%", borderRadius: 12, padding: 12 },
   aiBubble: {
-    backgroundColor: "#E8F5E9",
-    borderLeftWidth: 3,
-    borderTopLeftRadius: 4,
+    backgroundColor: "#F1F8F6",
   },
   userBubble: {
     backgroundColor: colors.surface,
-    borderTopRightRadius: 4,
   },
   bubbleText: { fontSize: 15, lineHeight: 22 },
   aiText: { color: colors.textPrimary },
