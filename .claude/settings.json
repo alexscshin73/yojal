@@ -6,18 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '📋 세션 종료 체크리스트' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '✅ 브라우저에서 직접 확인했나요?' && echo '✅ 콘솔 에러가 없나요?' && echo '✅ PROGRESS.md를 업데이트했나요?' && echo '✅ GitHub에 커밋했나요?' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "cd /home/scshin/projects/yojal && if [ -f package.json ] && command -v npx >/dev/null 2>&1; then npx tsc --noEmit 2>&1 | head -20 || true; fi"
+            "command": "echo '' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '📋 세션 종료 체크리스트' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '1. 새로운 결정사항을 PLANNING.md에 저장했나요?' && echo '2. PROGRESS.md를 업데이트했나요?' && echo '3. GitHub에 커밋+푸시했나요?' && echo '4. 현재 게이트 상태를 확인했나요?' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '현재 게이트: 기획 단계 (화면 목록 논의 중)'"
           }
         ]
       }
