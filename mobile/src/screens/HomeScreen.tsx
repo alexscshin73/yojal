@@ -1,13 +1,14 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../theme";
+import { LearningType } from "../types";
 
-const todaySchedule = [
-  { time: "06:00", type: "인사말", status: "done" },
-  { time: "08:30", type: "상황 단어", status: "done" },
-  { time: "13:00", type: "새 학습", status: "active" },
-  { time: "15:00", type: "복습", status: "pending" },
-  { time: "21:00", type: "일기 쓰기", status: "pending" },
+const todaySchedule: { time: string; type: string; learningType: LearningType; status: string }[] = [
+  { time: "06:00", type: "인사말", learningType: "greeting", status: "done" },
+  { time: "08:30", type: "상황 단어", learningType: "situational", status: "done" },
+  { time: "13:00", type: "새 학습", learningType: "new_learning", status: "active" },
+  { time: "15:00", type: "복습", learningType: "review", status: "pending" },
+  { time: "21:00", type: "일기 쓰기", learningType: "diary", status: "pending" },
 ];
 
 const statusIcon = (status: string) => {
@@ -16,7 +17,13 @@ const statusIcon = (status: string) => {
   return "⏸";
 };
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }: any) {
+  const activeItem = todaySchedule.find((s) => s.status === "active");
+
+  function goToChat(learningType: LearningType) {
+    navigation.navigate("Chat", { learningType });
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
@@ -45,9 +52,11 @@ export default function HomeScreen() {
             <Text style={styles.dateText}>2026.04.23</Text>
           </View>
           {todaySchedule.map((item) => (
-            <View
+            <TouchableOpacity
               key={item.time}
               style={[styles.scheduleItem, item.status === "active" && styles.activeItem]}
+              onPress={() => goToChat(item.learningType)}
+              disabled={item.status === "pending"}
             >
               <Text style={styles.scheduleIcon}>{statusIcon(item.status)}</Text>
               <Text style={styles.scheduleTime}>{item.time}</Text>
@@ -62,11 +71,14 @@ export default function HomeScreen() {
               {item.status === "active" && (
                 <Text style={styles.activeLabel}>진행중</Text>
               )}
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
-        <TouchableOpacity style={styles.startButton}>
+        <TouchableOpacity
+          style={styles.startButton}
+          onPress={() => goToChat(activeItem?.learningType ?? "greeting")}
+        >
           <Text style={styles.startButtonText}>🦜 지금 학습 이어하기</Text>
         </TouchableOpacity>
       </ScrollView>
