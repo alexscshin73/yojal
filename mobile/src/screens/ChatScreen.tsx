@@ -17,6 +17,11 @@ import { colors } from "../theme";
 import { ChatMessage, LearningType, LEARNING_TYPE_COLORS, LEARNING_TYPE_LABELS } from "../types";
 import { startChat, sendMessage } from "../services/api";
 
+// ─── 폰트 크기 단계 ───────────────────────────────────────────────
+const FONT_SIZES = [13, 15, 17] as const;
+type FontSize = (typeof FONT_SIZES)[number];
+
+// ─── 힌트 데이터 ──────────────────────────────────────────────────
 const HINTS: Record<LearningType, string[]> = {
   greeting: ["Buenos días → 좋은 아침", "Estoy bien → 나는 잘 지내요", "¿Y tú? → 당신은요?"],
   situational: ["conducir → 운전하다", "el semáforo → 신호등", "aparcar → 주차하다"],
@@ -26,25 +31,147 @@ const HINTS: Record<LearningType, string[]> = {
   diary: ["Hoy → 오늘", "Me siento → 나는 ~하게 느낀다", "Fue → 이었다/했다"],
 };
 
-interface BubbleProps {
-  message: ChatMessage;
-  typeColor: string;
+// ─── 메시지 파싱 ──────────────────────────────────────────────────
+// ⚠️ 교정 블록을 분리: { correction, continuation }
+interface ParsedAI {
+  correction: { myAnswer: string; correct: string; explanation: string } | null;
+  continuation: string;
 }
 
-function Bubble({ message, typeColor }: BubbleProps) {
-  const isAI = message.role === "assistant";
+function parseAIMessage(content: string): ParsedAI {
+  const warningIdx = content.indexOf("⚠️");
+  if (warningIdx === -1) return { correction: null, continuation: content.trim() };
+
+  const correctionBlock = content.slice(warningIdx);
+  const lines = correctionBlock.split("\n").map((l) => l.trim()).filter(Boolean);
+
+  let myAnswer = "";
+  let correct = "";
+  let explanation = "";
+  const continuationLines: string[] = [];
+  let inCorrection = true;
+
+  for (const line of lines) {
+    if (line.startsWith("⚠️") || line.startsWith("내 답:") || line.includes("내 답:")) {
+      myAnswer = line.replace(/^⚠️\s*/, "").replace(/^내 답:\s*/, "").trim();
+    } else if (line.startsWith("정답:")) {
+      correct = line.replace(/^정답:\s*/, "").replace(/✓/, "").trim();
+    } else if (line.startsWith("설명:")) {
+      explanation = line.replace(/^설명:\s*/, "").trim();
+      inCorrection = false;
+    } else if (!inCorrection) {
+      continuationLines.push(line);
+    }
+  }
+
+  const before = content.slice(0, warningIdx).trim();
+  const continuation = [before, ...continuationLines].filter(Boolean).join("\n").trim();
+
+  return {
+    correction: myAnswer || correct ? { myAnswer, correct, explanation } : null,
+    continuation,
+  };
+}
+
+// ─── 교정 카드 (사용자 쪽에 붙음) ────────────────────────────────
+function CorrectionCard({ data, fontSize }: { data: ParsedAI["correction"]; fontSize: FontSize }) {
+  if (!data) return null;
   return (
-    <View style={[styles.bubbleRow, isAI ? styles.aiBubbleRow : styles.userBubbleRow]}>
-      {isAI && <Text style={styles.mascot}>🦜</Text>}
-      <View
-        style={[
-          styles.bubble,
-          isAI
-            ? [styles.aiBubble, { borderLeftColor: typeColor }]
-            : styles.userBubble,
-        ]}
-      >
-        <Text style={[styles.bubbleText, isAI ? styles.aiText : styles.userText]}>
+    <View style={corrStyles.card}>
+      <View style={corrStyles.row}>
+        <Text style={[corrStyles.label, corrStyles.myLabel]}>내 답</Text>
+        <Text style={[corrStyles.value, { fontSize }]}>{data.myAnswer}</Text>
+      </View>
+      <View style={corrStyles.divider} />
+      <View style={corrStyles.row}>
+        <Text style={[corrStyles.label, corrStyles.correctLabel]}>정답</Text>
+        <Text style={[corrStyles.value, corrStyles.correctValue, { fontSize }]}>
+          {data.correct} ✓
+        </Text>
+      </View>
+      {!!data.explanation && (
+        <Text style={[corrStyles.explanation, { fontSize: fontSize - 1 }]}>
+          💡 {data.explanation}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+const corrStyles = StyleSheet.create({
+  card: {
+    alignSelf: "flex-end",
+    maxWidth: "92%",
+    backgroundColor: "#FFF8E1",
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: "#FB8C00",
+    padding: 12,
+    marginBottom: 4,
+    marginTop: 4,
+  },
+  row: { flexDirection: "row", alignItems: "flex-start", marginBottom: 4 },
+  label: {
+    fontSize: 11,
+    fontWeight: "bold",
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    marginRight: 8,
+    marginTop: 2,
+    overflow: "hidden",
+  },
+  myLabel: { backgroundColor: "#FFCCBC", color: "#BF360C" },
+  correctLabel: { backgroundColor: "#C8E6C9", color: "#1B5E20" },
+  value: { flex: 1, color: colors.textPrimary, lineHeight: 20 },
+  correctValue: { color: "#2E7D32", fontWeight: "600" },
+  divider: { height: 1, backgroundColor: "#FFE0B2", marginVertical: 6 },
+  explanation: { color: "#795548", marginTop: 6, lineHeight: 18 },
+});
+
+// ─── 일반 말풍선 ──────────────────────────────────────────────────
+function Bubble({
+  message,
+  typeColor,
+  fontSize,
+}: {
+  message: ChatMessage;
+  typeColor: string;
+  fontSize: FontSize;
+}) {
+  const isAI = message.role === "assistant";
+
+  if (isAI) {
+    const parsed = parseAIMessage(message.content);
+    return (
+      <View style={{ marginBottom: 12 }}>
+        {/* 교정 카드 — 사용자 쪽(우측)에 붙음 */}
+        {parsed.correction && (
+          <CorrectionCard data={parsed.correction} fontSize={fontSize} />
+        )}
+        {/* 구분선 */}
+        {parsed.correction && !!parsed.continuation && (
+          <View style={bubbleStyles.separator} />
+        )}
+        {/* AI 다음 대화 */}
+        {!!parsed.continuation && (
+          <View style={bubbleStyles.aiBubbleRow}>
+            <Text style={bubbleStyles.mascot}>🦜</Text>
+            <View style={[bubbleStyles.bubble, bubbleStyles.aiBubble]}>
+              <Text style={[bubbleStyles.aiText, { fontSize, lineHeight: fontSize * 1.6 }]}>
+                {parsed.continuation}
+              </Text>
+            </View>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View style={[bubbleStyles.userBubbleRow, { marginBottom: 4 }]}>
+      <View style={[bubbleStyles.bubble, bubbleStyles.userBubble]}>
+        <Text style={[bubbleStyles.userText, { fontSize, lineHeight: fontSize * 1.6 }]}>
           {message.content}
         </Text>
       </View>
@@ -52,6 +179,24 @@ function Bubble({ message, typeColor }: BubbleProps) {
   );
 }
 
+const bubbleStyles = StyleSheet.create({
+  aiBubbleRow: { flexDirection: "row", alignItems: "flex-end", marginBottom: 4 },
+  userBubbleRow: { flexDirection: "row", justifyContent: "flex-end" },
+  mascot: { fontSize: 28, marginRight: 8, marginBottom: 2 },
+  bubble: { maxWidth: "85%", borderRadius: 12, padding: 12 },
+  aiBubble: { backgroundColor: "#F1F8F6" },
+  userBubble: { backgroundColor: "#E8EAF6" },
+  aiText: { color: colors.textPrimary },
+  userText: { color: "#283593" },
+  separator: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 8,
+    marginHorizontal: 8,
+  },
+});
+
+// ─── 메인 화면 ────────────────────────────────────────────────────
 export default function ChatScreen({ route, navigation }: any) {
   const learningType: LearningType = route?.params?.learningType ?? "greeting";
   const level: number = route?.params?.level ?? 1;
@@ -64,18 +209,18 @@ export default function ChatScreen({ route, navigation }: any) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [hintVisible, setHintVisible] = useState(false);
+  const [fontSizeIdx, setFontSizeIdx] = useState(1); // 기본: 15px
+  const fontSize = FONT_SIZES[fontSizeIdx];
   const listRef = useRef<FlatList>(null);
 
-  useEffect(() => {
-    loadInitialMessage();
-  }, []);
+  useEffect(() => { loadInitialMessage(); }, []);
 
   async function loadInitialMessage() {
     setLoading(true);
     try {
       const reply = await startChat(learningType, level, day);
       setMessages([{ role: "assistant", content: reply }]);
-    } catch (e) {
+    } catch {
       setMessages([{ role: "assistant", content: "서버 연결에 실패했어요. 잠시 후 다시 시도해주세요." }]);
     } finally {
       setLoading(false);
@@ -86,12 +231,10 @@ export default function ChatScreen({ route, navigation }: any) {
     const text = input.trim();
     if (!text || loading) return;
     setInput("");
-
     const userMsg: ChatMessage = { role: "user", content: text };
     const updatedHistory = [...messages, userMsg];
     setMessages(updatedHistory);
     setLoading(true);
-
     try {
       const reply = await sendMessage(text, learningType, messages, level, day);
       setMessages([...updatedHistory, { role: "assistant", content: reply }]);
@@ -102,19 +245,28 @@ export default function ChatScreen({ route, navigation }: any) {
     }
   }
 
+  function cycleFontSize() {
+    setFontSizeIdx((prev) => (prev + 1) % FONT_SIZES.length);
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={mainStyles.container}>
       {/* 헤더 */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← 뒤로</Text>
+      <View style={mainStyles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={mainStyles.headerBtn}>
+          <Text style={mainStyles.backText}>← 뒤로</Text>
         </TouchableOpacity>
-        <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
-          <Text style={styles.typeBadgeText}>{typeLabel}{levelLabel}</Text>
+        <View style={[mainStyles.typeBadge, { backgroundColor: typeColor }]}>
+          <Text style={mainStyles.typeBadgeText}>{typeLabel}{levelLabel}</Text>
         </View>
-        <TouchableOpacity onPress={() => setHintVisible(true)} style={styles.hintButton}>
-          <Text style={styles.hintText}>? 힌트</Text>
-        </TouchableOpacity>
+        <View style={mainStyles.headerRight}>
+          <TouchableOpacity onPress={cycleFontSize} style={mainStyles.headerBtn}>
+            <Text style={mainStyles.fontSizeBtn}>Aa {fontSize}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setHintVisible(true)} style={mainStyles.headerBtn}>
+            <Text style={mainStyles.hintText}>? 힌트</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 메시지 목록 */}
@@ -122,14 +274,16 @@ export default function ChatScreen({ route, navigation }: any) {
         ref={listRef}
         data={messages}
         keyExtractor={(_, i) => String(i)}
-        renderItem={({ item }) => <Bubble message={item} typeColor={typeColor} />}
-        contentContainerStyle={styles.messageList}
+        renderItem={({ item }) => (
+          <Bubble message={item} typeColor={typeColor} fontSize={fontSize} />
+        )}
+        contentContainerStyle={mainStyles.messageList}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         ListFooterComponent={
           loading ? (
-            <View style={styles.loadingRow}>
-              <Text style={styles.mascot}>🦜</Text>
-              <ActivityIndicator color={colors.primary} style={{ marginLeft: 8 }} />
+            <View style={{ flexDirection: "row", alignItems: "center", padding: 8 }}>
+              <Text style={{ fontSize: 28, marginRight: 8 }}>🦜</Text>
+              <ActivityIndicator color={colors.primary} />
             </View>
           ) : null
         }
@@ -137,40 +291,39 @@ export default function ChatScreen({ route, navigation }: any) {
 
       {/* 입력창 */}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={styles.inputBar}>
+        <View style={mainStyles.inputBar}>
           <TextInput
-            style={styles.input}
+            style={[mainStyles.input, { fontSize }]}
             value={input}
             onChangeText={setInput}
             placeholder="스페인어로 답장해보세요..."
             placeholderTextColor={colors.textSecondary}
             multiline
-            onSubmitEditing={handleSend}
           />
           <TouchableOpacity
-            style={[styles.sendButton, { backgroundColor: typeColor }]}
+            style={[mainStyles.sendButton, { backgroundColor: typeColor }]}
             onPress={handleSend}
             disabled={loading}
           >
-            <Text style={styles.sendText}>➤</Text>
+            <Text style={mainStyles.sendText}>➤</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
 
       {/* 힌트 패널 */}
       <Modal visible={hintVisible} transparent animationType="slide">
-        <TouchableOpacity style={styles.modalOverlay} onPress={() => setHintVisible(false)} />
-        <View style={styles.hintPanel}>
-          <View style={styles.hintHeader}>
-            <Text style={styles.hintTitle}>💡 힌트</Text>
+        <TouchableOpacity style={mainStyles.modalOverlay} onPress={() => setHintVisible(false)} />
+        <View style={mainStyles.hintPanel}>
+          <View style={mainStyles.hintHeader}>
+            <Text style={mainStyles.hintTitle}>💡 힌트</Text>
             <TouchableOpacity onPress={() => setHintVisible(false)}>
-              <Text style={styles.hintClose}>✕</Text>
+              <Text style={mainStyles.hintClose}>✕</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.hintDivider} />
+          <View style={mainStyles.hintDivider} />
           <ScrollView>
             {HINTS[learningType].map((hint, i) => (
-              <Text key={i} style={styles.hintItem}>• {hint}</Text>
+              <Text key={i} style={[mainStyles.hintItem, { fontSize }]}>• {hint}</Text>
             ))}
           </ScrollView>
         </View>
@@ -179,53 +332,35 @@ export default function ChatScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const mainStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  backButton: { paddingRight: 12 },
-  backText: { fontSize: 15, color: colors.primary },
+  headerBtn: { paddingHorizontal: 6 },
+  backText: { fontSize: 14, color: colors.primary },
   typeBadge: {
     flex: 1,
-    alignSelf: "center",
     borderRadius: 16,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 4,
     alignItems: "center",
+    marginHorizontal: 6,
   },
-  typeBadgeText: { color: "#fff", fontWeight: "bold", fontSize: 14 },
-  hintButton: { paddingLeft: 12 },
-  hintText: { fontSize: 15, color: colors.primary },
-
-  messageList: { padding: 16, paddingBottom: 8 },
-  bubbleRow: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end" },
-  aiBubbleRow: { justifyContent: "flex-start" },
-  userBubbleRow: { justifyContent: "flex-end" },
-  mascot: { fontSize: 32, marginRight: 8, marginBottom: 2 },
-  bubble: { maxWidth: "92%", borderRadius: 12, padding: 12 },
-  aiBubble: {
-    backgroundColor: "#F1F8F6",
-  },
-  userBubble: {
-    backgroundColor: colors.surface,
-  },
-  bubbleText: { fontSize: 15, lineHeight: 22 },
-  aiText: { color: colors.textPrimary },
-  userText: { color: colors.textPrimary },
-
-  loadingRow: { flexDirection: "row", alignItems: "center", padding: 8 },
-
+  typeBadgeText: { color: "#fff", fontWeight: "bold", fontSize: 13 },
+  headerRight: { flexDirection: "row", alignItems: "center" },
+  fontSizeBtn: { fontSize: 12, color: colors.textSecondary, marginRight: 4 },
+  hintText: { fontSize: 14, color: colors.primary },
+  messageList: { padding: 14, paddingBottom: 8 },
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",
-    padding: 12,
+    padding: 10,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     gap: 8,
@@ -235,21 +370,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     color: colors.textPrimary,
     maxHeight: 100,
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: "center",
     alignItems: "center",
   },
-  sendText: { color: "#fff", fontSize: 18 },
-
+  sendText: { color: "#fff", fontSize: 17 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)" },
   hintPanel: {
     backgroundColor: colors.background,
@@ -259,8 +392,8 @@ const styles = StyleSheet.create({
     maxHeight: "40%",
   },
   hintHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  hintTitle: { fontSize: 18, fontWeight: "bold", color: colors.textPrimary },
+  hintTitle: { fontSize: 17, fontWeight: "bold", color: colors.textPrimary },
   hintClose: { fontSize: 20, color: colors.textSecondary },
   hintDivider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
-  hintItem: { fontSize: 15, color: colors.textPrimary, marginBottom: 10, lineHeight: 22 },
+  hintItem: { color: colors.textPrimary, marginBottom: 10, lineHeight: 22 },
 });
