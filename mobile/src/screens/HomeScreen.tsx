@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   greeting: { fontSize: 20, fontWeight: "bold", color: colors.textPrimary },
-  mascot: { fontSize: 18, color: colors.primary, fontWeight: "600" },
+  mascot: { fontSize: 14, color: colors.primary, fontWeight: "600" },
   statsCard: {
     margin: 16,
     padding: 16,

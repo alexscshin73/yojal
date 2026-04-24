@@ -56,7 +56,7 @@ async def call_ollama(messages: list) -> str:
                 "model": OLLAMA_MODEL,
                 "messages": messages,
                 "stream": False,
-                "options": {"num_ctx": NUM_CTX, "num_gpu": 99},
+                "options": {"num_ctx": NUM_CTX, "num_gpu": 99, "num_predict": 600},
             },
         )
         response.raise_for_status()

@@ -150,47 +150,48 @@ CURRICULUM = {
 def get_level_prompt(level: int, day: int) -> str:
     c = CURRICULUM.get(level, CURRICULUM[1])
     next_level = min(level + 1, 20)
-    next_c = CURRICULUM.get(next_level, c)
 
-    vocab_str = " / ".join(c["vocab"])
-    sentences_str = "\n".join(f"  • {s}" for s in c["sentences"])
-    idioms_str = "\n".join(f"  • {i}" for i in c["idioms"])
+    verb = c["vocab"][1] if len(c["vocab"]) > 1 else c["vocab"][0]
+    noun = c["vocab"][2] if len(c["vocab"]) > 2 else c["vocab"][0]
 
     return f"""당신은 Yojal, 한국인을 위한 스페인어 AI 선생님입니다.
-지금은 '새 학습' 시간입니다.
 
-학생 현재 레벨: {level}단계 — {c['title']}
-오늘 차시: {day}일차
+학생 레벨: {level}단계 ({c['title']}) / {day}일차
 
-다음 형식으로 수업을 진행하세요:
+다음 형식으로 수업하세요. 이 형식을 정확히 따르세요:
 
-📅 [ {day}일차 - 레벨: {level:02d} → {next_level:02d} 도전 ]
+📅 {day}일차 — 레벨 {level:02d} → {next_level:02d} 도전
 
-👉 오늘 목표
-{c['title']} 마스터하기
+━━━ 오늘 배울 것 ━━━
 
-🔥 핵심 단어 (오늘 꼭 외울 것)
-{vocab_str}
+🔤 동사: {verb}
+  활용) {c['grammar']}
+  예문 1)
+  [스페인어 예문]
+  ([한국어 해석])
+  예문 2)
+  [스페인어 예문]
+  ([한국어 해석])
 
-📖 문법 포인트
-{c['grammar']}
+📝 단어: {noun}
+  예문 1)
+  [스페인어 예문]
+  ([한국어 해석])
+  예문 2)
+  [스페인어 예문]
+  ([한국어 해석])
 
-💬 오늘의 예문
-{sentences_str}
+📌 문법 포인트
+  {c['grammar']}
 
-🗣️ 관용표현
-{idioms_str}
+━━━ 문제 5개 ━━━
+한국어 → 스페인어. 번호 붙여서 제시.
 
-📝 문제 (15개)
-한국어 → 스페인어로 번역하는 문제 15개를 번호를 붙여 제시하세요.
-현재 레벨({level}단계)의 내용을 중심으로, 이전 레벨 내용도 20% 포함하세요.
+━━━ 체크 3개 ━━━
+O/X 또는 빈칸으로 핵심 확인.
 
-✅ 초간단 체크 (5개)
-맞다/틀리다 또는 빈칸 채우기 5개로 핵심만 확인하세요.
-
-규칙:
-- 학생이 문제에 답하면 즉시 교정해주세요
-- 교정 형식: ⚠️ 내 답: xxx / 정답: xxx ✓ / 설명: ...
-- 모든 수업 내용은 스페인어와 한국어를 함께 표시
-- 격려하는 톤 유지
-- 레벨 {next_level} 도전 기준: 이번 수업 문제 80% 이상 정답"""
+출력 형식 규칙:
+- 스페인어와 한국어 해석은 반드시 줄바꿈으로 구분
+- 교정: ⚠️ 내 답: xxx\\n정답: xxx ✓\\n설명: ...
+- 학생이 답하면 즉시 교정 후 다음으로 진행
+- 응원하는 톤 유지"""
