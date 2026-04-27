@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useRef, useState } from "react";
 import { colors } from "../theme";
 import { ChatMessage, LearningType, LEARNING_TYPE_COLORS, LEARNING_TYPE_LABELS } from "../types";
-import { startChat, sendMessage } from "../services/api";
+import { streamStart, streamChat } from "../services/api";
 
 // ─── 폰트 크기 단계 ───────────────────────────────────────────────
 const FONT_SIZES = [13, 15, 17] as const;
@@ -217,9 +217,14 @@ export default function ChatScreen({ route, navigation }: any) {
 
   async function loadInitialMessage() {
     setLoading(true);
+    const placeholder: ChatMessage = { role: "assistant", content: "" };
+    setMessages([placeholder]);
+    let accumulated = "";
     try {
-      const reply = await startChat(learningType, level, day);
-      setMessages([{ role: "assistant", content: reply }]);
+      await streamStart(learningType, level, day, (token) => {
+        accumulated += token;
+        setMessages([{ role: "assistant", content: accumulated }]);
+      });
     } catch {
       setMessages([{ role: "assistant", content: "서버 연결에 실패했어요. 잠시 후 다시 시도해주세요." }]);
     } finally {
@@ -232,12 +237,16 @@ export default function ChatScreen({ route, navigation }: any) {
     if (!text || loading) return;
     setInput("");
     const userMsg: ChatMessage = { role: "user", content: text };
-    const updatedHistory = [...messages, userMsg];
-    setMessages(updatedHistory);
+    const historySnapshot = [...messages];
+    const updatedHistory: ChatMessage[] = [...historySnapshot, userMsg];
+    setMessages([...updatedHistory, { role: "assistant", content: "" }]);
     setLoading(true);
+    let accumulated = "";
     try {
-      const reply = await sendMessage(text, learningType, messages, level, day);
-      setMessages([...updatedHistory, { role: "assistant", content: reply }]);
+      await streamChat(text, learningType, historySnapshot, level, day, (token) => {
+        accumulated += token;
+        setMessages([...updatedHistory, { role: "assistant", content: accumulated }]);
+      });
     } catch {
       setMessages([...updatedHistory, { role: "assistant", content: "응답을 가져오지 못했어요. 다시 시도해주세요." }]);
     } finally {
@@ -280,7 +289,7 @@ export default function ChatScreen({ route, navigation }: any) {
         contentContainerStyle={mainStyles.messageList}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         ListFooterComponent={
-          loading ? (
+          loading && messages.at(-1)?.content === "" ? (
             <View style={{ flexDirection: "row", alignItems: "center", padding: 8 }}>
               <Text style={{ fontSize: 28, marginRight: 8 }}>🦜</Text>
               <ActivityIndicator color={colors.primary} />

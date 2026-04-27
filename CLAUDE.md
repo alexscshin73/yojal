@@ -1,15 +1,15 @@
-# Yojal — 프로젝트 헌법 (Harness Guide)
+# PicoPico — 프로젝트 헌법 (Harness Guide)
 
-> 새 세션 시작 시 반드시 이 파일 → PLANNING.md → PROGRESS.md 순서로 읽는다.
+> 새 세션 시작 시 반드시 이 파일 → HANDOVER.md → PLANNING.md → PROGRESS.md 순서로 읽는다.
 
 ---
 
 ## 프로젝트 정체성
 
-**Yojal** (요할) — 한국어 "조잘조잘/재잘재잘"에서 온 이름
-**슬로건**: Habla más, aprende mejor.
-**플랫폼**: 모바일 앱 (React Native/Expo)
-**저장소**: https://github.com/alexscshin73/yojal.git
+**PicoPico** — 스페인어 AI 학습 앱 (브랜드명 확정: 2026-04-24)  
+**슬로건**: Habla más, aprende mejor.  
+**플랫폼**: 모바일 앱 (React Native/Expo)  
+**저장소**: https://github.com/alexscshin73/yojal.git (저장소명은 yojal 유지)
 
 자세한 기획 내용 → PLANNING.md 참고
 
