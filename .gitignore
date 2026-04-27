@@ -38,3 +38,4 @@ backend/.env
 backend/__pycache__/
 backend/venv/
 backend/.env
+backend/picopico.db

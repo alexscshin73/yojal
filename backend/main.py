@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from prompts import SYSTEM_PROMPTS, LEARNING_TYPE_LABELS
 from curriculum import get_level_prompt, CURRICULUM
+from database import init_db, check_db, get_db
+from models import LearningItem, LearningItemCreate
 
 load_dotenv()
 
@@ -172,6 +174,7 @@ async def stream_ollama(messages: list):
 
 @app.on_event("startup")
 async def startup():
+    await init_db()
     scheduler.add_job(send_push, "cron", hour=6, minute=0,
                       args=["🌅 좋은 아침!", "스페인어로 인사해볼까요? ¡Buenos días!", "greeting"])
     scheduler.add_job(send_push, "cron", hour=9, minute=0,
@@ -189,7 +192,63 @@ async def shutdown():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    db_ok = await check_db()
+    return {"status": "ok", "db": "ok" if db_ok else "error"}
+
+
+# ── Learning Items ───────────────────────────────────────────────────
+
+@app.get("/items", response_model=list[LearningItem])
+async def get_items(
+    level: Optional[str] = Query(None),
+    module_id: Optional[str] = Query(None),
+    type: Optional[str] = Query(None),
+):
+    query = "SELECT * FROM learning_items WHERE 1=1"
+    params = []
+    if level:
+        query += " AND level = ?"
+        params.append(level)
+    if module_id:
+        query += " AND module_id = ?"
+        params.append(module_id)
+    if type:
+        query += " AND type = ?"
+        params.append(type)
+    query += " ORDER BY module_id, id"
+
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+        async with db.execute(query, params) as cursor:
+            rows = await cursor.fetchall()
+    return [LearningItem(**r) for r in rows]
+
+
+@app.post("/items", response_model=LearningItem, status_code=201)
+async def create_item(item: LearningItemCreate):
+    async with get_db() as db:
+        await db.execute(
+            """INSERT INTO learning_items
+               (id, level, module_id, type, content, meaning, example_1, example_2, audio_url, tags)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (item.id, item.level, item.module_id, item.type, item.content,
+             item.meaning, item.example_1, item.example_2, item.audio_url,
+             json.dumps(item.tags, ensure_ascii=False)),
+        )
+        await db.commit()
+    return LearningItem(**item.model_dump())
+
+
+@app.get("/items/count")
+async def count_items():
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+        async with db.execute(
+            "SELECT level, COUNT(*) as count FROM learning_items GROUP BY level ORDER BY level"
+        ) as cursor:
+            rows = await cursor.fetchall()
+    total = sum(r["count"] for r in rows)
+    return {"total": total, "by_level": rows}
 
 
 # ── 푸시 토큰 등록 ───────────────────────────────────────────────────
