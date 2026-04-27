@@ -5,6 +5,16 @@ DB_PATH = Path(__file__).parent / "picopico.db"
 
 _CREATE_TABLES = [
     """
+    CREATE TABLE IF NOT EXISTS users (
+        id            TEXT PRIMARY KEY,
+        email         TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        nickname      TEXT NOT NULL,
+        created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+        is_active     INTEGER NOT NULL DEFAULT 1
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS learning_items (
         id          TEXT PRIMARY KEY,
         level       TEXT NOT NULL,

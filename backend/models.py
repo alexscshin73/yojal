@@ -1,6 +1,32 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, EmailStr
 from typing import Optional, List
 import json
+
+
+# ── Auth ─────────────────────────────────────────────────────────────
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    nickname: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class UserPublic(BaseModel):
+    id: str
+    email: str
+    nickname: str
+    created_at: str
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserPublic
 
 
 class LearningItem(BaseModel):

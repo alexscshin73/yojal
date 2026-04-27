@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -12,7 +12,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from prompts import SYSTEM_PROMPTS, LEARNING_TYPE_LABELS
 from curriculum import get_level_prompt, CURRICULUM
 from database import init_db, check_db, get_db
-from models import LearningItem, LearningItemCreate
+from models import LearningItem, LearningItemCreate, RegisterRequest, LoginRequest, AuthResponse, UserPublic
+from auth import hash_password, verify_password, create_token, new_user_id, get_current_user
 
 load_dotenv()
 
@@ -189,6 +190,61 @@ async def shutdown():
 
 
 # ── 헬스체크 ────────────────────────────────────────────────────────
+
+# ── Auth ────────────────────────────────────────────────────────────
+
+@app.post("/auth/register", response_model=AuthResponse, status_code=201)
+async def register(req: RegisterRequest):
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+        async with db.execute("SELECT id FROM users WHERE email = ?", (req.email,)) as cur:
+            if await cur.fetchone():
+                raise HTTPException(status_code=400, detail="이미 사용 중인 이메일입니다")
+
+        uid = new_user_id()
+        await db.execute(
+            "INSERT INTO users (id, email, password_hash, nickname) VALUES (?, ?, ?, ?)",
+            (uid, req.email, hash_password(req.password), req.nickname),
+        )
+        await db.commit()
+
+        async with db.execute("SELECT * FROM users WHERE id = ?", (uid,)) as cur:
+            user = await cur.fetchone()
+
+    return AuthResponse(
+        access_token=create_token(uid),
+        user=UserPublic(**user),
+    )
+
+
+@app.post("/auth/login", response_model=AuthResponse)
+async def login(req: LoginRequest):
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+        async with db.execute("SELECT * FROM users WHERE email = ?", (req.email,)) as cur:
+            user = await cur.fetchone()
+
+    if not user or not verify_password(req.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 틀렸습니다")
+    if not user["is_active"]:
+        raise HTTPException(status_code=403, detail="비활성화된 계정입니다")
+
+    return AuthResponse(
+        access_token=create_token(user["id"]),
+        user=UserPublic(**user),
+    )
+
+
+@app.get("/auth/me", response_model=UserPublic)
+async def me(user_id: str = Depends(get_current_user)):
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+        async with db.execute("SELECT * FROM users WHERE id = ?", (user_id,)) as cur:
+            user = await cur.fetchone()
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    return UserPublic(**user)
+
 
 @app.get("/health")
 async def health():

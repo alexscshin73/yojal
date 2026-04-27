@@ -2,7 +2,7 @@ import { NavigationContainer, createNavigationContainerRef } from "@react-naviga
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import { Text, Platform } from "react-native";
+import { Text, Platform, View, ActivityIndicator } from "react-native";
 import { useEffect } from "react";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
@@ -12,6 +12,9 @@ import HomeScreen from "./src/screens/HomeScreen";
 import RecordsScreen from "./src/screens/RecordsScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import ChatScreen from "./src/screens/ChatScreen";
+import LoginScreen from "./src/screens/auth/LoginScreen";
+import RegisterScreen from "./src/screens/auth/RegisterScreen";
+import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { colors } from "./src/theme";
 import { API_BASE_URL } from "./src/config";
 
@@ -83,24 +86,51 @@ function TabNavigator() {
   );
 }
 
+function RootNavigator() {
+  const { user, token, isLoading } = useAuth();
+
+  // 토큰 검증 중 스플래시
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background }}>
+        <Text style={{ fontSize: 48 }}>🦜</Text>
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 16 }} />
+      </View>
+    );
+  }
+
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {user && token ? (
+        // 인증된 사용자 → 메인 앱
+        <>
+          <Stack.Screen name="Main" component={TabNavigator} />
+          <Stack.Screen name="Chat" component={ChatScreen} />
+        </>
+      ) : (
+        // 미인증 → 로그인/회원가입
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+        </>
+      )}
+    </Stack.Navigator>
+  );
+}
+
 export default function App() {
   useEffect(() => {
-    // 푸시 토큰 등록
     registerForPushNotifications()
       .then((token) => {
-        if (!token) { console.log("[Push] 토큰 없음 (시뮬레이터거나 권한 거부)"); return; }
-        console.log("[Push] 토큰:", token);
+        if (!token) { console.log("[Push] 토큰 없음"); return; }
         fetch(`${API_BASE_URL}/register-token`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
-        })
-          .then(() => console.log("[Push] 토큰 등록 성공"))
-          .catch((e) => console.log("[Push] 백엔드 등록 실패:", e));
+        }).catch((e) => console.log("[Push] 백엔드 등록 실패:", e));
       })
       .catch((e) => console.log("[Push] 토큰 발급 실패:", e));
 
-    // 알림 탭 → 해당 학습 타입 ChatScreen으로 이동
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const learningType = response.notification.request.content.data?.learningType;
       if (learningType && navigationRef.isReady()) {
@@ -112,12 +142,11 @@ export default function App() {
   }, []);
 
   return (
-    <NavigationContainer ref={navigationRef}>
-      <StatusBar style="dark" />
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Main" component={TabNavigator} />
-        <Stack.Screen name="Chat" component={ChatScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AuthProvider>
+      <NavigationContainer ref={navigationRef}>
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
 }

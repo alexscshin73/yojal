@@ -1,17 +1,29 @@
 import { API_BASE_URL } from "../config";
 import { ChatMessage, LearningType } from "../types";
 
+// ── 인증 헤더 ─────────────────────────────────────────────────────
+// token은 호출 측에서 AuthContext에서 꺼내 전달한다
+
+function authHeaders(token: string): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+}
+
 // ── SSE 스트리밍 파서 (XHR 기반 — React Native에서 response.body.getReader() 미지원) ──
 
 function xhrSSE(
   url: string,
   body: object,
-  onToken: (token: string) => void
+  onToken: (token: string) => void,
+  authToken?: string
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url, true);
     xhr.setRequestHeader("Content-Type", "application/json");
+    if (authToken) xhr.setRequestHeader("Authorization", `Bearer ${authToken}`);
 
     let cursor = 0;
 
@@ -45,12 +57,14 @@ export function streamStart(
   learningType: LearningType,
   level: number,
   day: number,
-  onToken: (token: string) => void
+  onToken: (token: string) => void,
+  authToken?: string
 ): Promise<void> {
   return xhrSSE(
     `${API_BASE_URL}/chat/start/stream`,
     { learning_type: learningType, level, day },
-    onToken
+    onToken,
+    authToken
   );
 }
 
@@ -60,13 +74,29 @@ export function streamChat(
   history: ChatMessage[],
   level: number,
   day: number,
-  onToken: (token: string) => void
+  onToken: (token: string) => void,
+  authToken?: string
 ): Promise<void> {
   return xhrSSE(
     `${API_BASE_URL}/chat/stream`,
     { message, learning_type: learningType, history, level, day },
-    onToken
+    onToken,
+    authToken
   );
+}
+
+// ── Learning Items ────────────────────────────────────────────────
+
+export async function getItems(
+  token: string,
+  params?: { level?: string; module_id?: string; type?: string }
+): Promise<any[]> {
+  const qs = new URLSearchParams(params as any).toString();
+  const res = await fetch(`${API_BASE_URL}/items${qs ? `?${qs}` : ""}`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
+  return res.json();
 }
 
 // ── 비스트리밍 fallback (필요시) ─────────────────────────────────
@@ -74,11 +104,14 @@ export function streamChat(
 export async function startChat(
   learningType: LearningType,
   level = 1,
-  day = 1
+  day = 1,
+  authToken?: string
 ): Promise<string> {
   const res = await fetch(`${API_BASE_URL}/chat/start`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authToken
+      ? authHeaders(authToken)
+      : { "Content-Type": "application/json" },
     body: JSON.stringify({ learning_type: learningType, level, day }),
   });
   if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
@@ -90,11 +123,14 @@ export async function sendMessage(
   learningType: LearningType,
   history: ChatMessage[],
   level = 1,
-  day = 1
+  day = 1,
+  authToken?: string
 ): Promise<string> {
   const res = await fetch(`${API_BASE_URL}/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authToken
+      ? authHeaders(authToken)
+      : { "Content-Type": "application/json" },
     body: JSON.stringify({ message, learning_type: learningType, history, level, day }),
   });
   if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
