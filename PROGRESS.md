@@ -7,9 +7,9 @@
 
 ## 현재 상태 (2026-04-27)
 
-**현재 게이트**: 개발 게이트 ✅ 승인 완료 — 개발 진행 중  
-**완료된 마일스톤**: D-01 ~ D-05 (외부 접속 완성)  
-**다음 할 일**: D-06 푸시 알림 → MVP 완성
+**현재 게이트**: 개발 게이트 ✅ 승인 완료 — **MVP 완성**  
+**완료된 마일스톤**: D-01 ~ D-06 (전체 완료)  
+**다음 할 일**: Phase 2 — 디자인 개선 + 루틴 설정 화면
 
 ---
 
@@ -36,13 +36,14 @@
 | UI | 홈 우측상단 앵무새 아이콘/텍스트 크기 독립 제어 | 2026-04-24 |
 | Fix | SSE 스트리밍: response.body.getReader() → XMLHttpRequest.onprogress 교체 (React Native 호환) | 2026-04-27 |
 | D-05 | Cloudflare Tunnel — picopico.carroamix.com → localhost:8000, 모바일 데이터 실기기 확인 | 2026-04-27 |
+| D-06 | 푸시 알림 — APScheduler(6시/9시/21시) + Expo Push + 딥링크(알림 탭→ChatScreen) 실기기 확인 | 2026-04-27 |
 
 ---
 
 ## 진행 중 / 대기 중
 
 - [x] **D-05**: Cloudflare Tunnel — picopico.carroamix.com ✅
-- [ ] **D-06**: 푸시 알림 (APScheduler + Expo Push) ← **다음 작업**
+- [x] **D-06**: 푸시 알림 — APScheduler + Expo Push + 딥링크 ✅
 
 ---
 
@@ -54,6 +55,7 @@
 | 2026-04-23 | D-01~D-04 연속 완료 — Ollama, FastAPI, Expo, ChatScreen | 완료 |
 | 2026-04-24 | SSE 스트리밍 구현 (백엔드 + 앱), 브랜드 PicoPico로 변경, UI 디테일 수정 | 완료 |
 | 2026-04-27 | SSE XHR 수정, D-05 Cloudflare Tunnel (picopico.carroamix.com), 폴더명 yojal→picopico 정리 | 완료 |
+| 2026-04-27 | D-06 푸시 알림 완성 — APScheduler + Expo Push + 딥링크 실기기 확인, **MVP 완성** | 완료 |
 
 ---
 

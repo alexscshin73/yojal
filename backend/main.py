@@ -6,7 +6,9 @@ from typing import Literal, Optional
 import httpx
 import json
 import os
+from pathlib import Path
 from dotenv import load_dotenv
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from prompts import SYSTEM_PROMPTS, LEARNING_TYPE_LABELS
 from curriculum import get_level_prompt, CURRICULUM
 
@@ -48,7 +50,45 @@ class ChatResponse(BaseModel):
     learning_type_label: str
 
 
-app = FastAPI(title="Yojal API", version="0.1.0")
+class TokenRequest(BaseModel):
+    token: str
+
+
+# ── 푸시 토큰 저장소 ─────────────────────────────────────────────────
+TOKENS_FILE = Path("/tmp/picopico_tokens.json")
+
+def load_tokens() -> list[str]:
+    if TOKENS_FILE.exists():
+        return json.loads(TOKENS_FILE.read_text())
+    return []
+
+def save_token(token: str):
+    tokens = load_tokens()
+    if token not in tokens:
+        tokens.append(token)
+        TOKENS_FILE.write_text(json.dumps(tokens))
+
+
+# ── Expo Push 발송 ───────────────────────────────────────────────────
+async def send_push(title: str, body: str, learning_type: str):
+    tokens = load_tokens()
+    if not tokens:
+        return
+    messages = [
+        {"to": t, "title": title, "body": body,
+         "data": {"learningType": learning_type}, "sound": "default"}
+        for t in tokens
+    ]
+    async with httpx.AsyncClient() as client:
+        await client.post(
+            "https://exp.host/--/api/v2/push/send",
+            json=messages,
+            headers={"Content-Type": "application/json"},
+        )
+
+
+app = FastAPI(title="PicoPico API", version="0.1.0")
+scheduler = AsyncIOScheduler(timezone="America/Mexico_City")
 
 app.add_middleware(
     CORSMiddleware,
@@ -128,11 +168,44 @@ async def stream_ollama(messages: list):
                     pass
 
 
+# ── 앱 시작/종료 ────────────────────────────────────────────────────
+
+@app.on_event("startup")
+async def startup():
+    scheduler.add_job(send_push, "cron", hour=6, minute=0,
+                      args=["🌅 좋은 아침!", "스페인어로 인사해볼까요? ¡Buenos días!", "greeting"])
+    scheduler.add_job(send_push, "cron", hour=9, minute=0,
+                      args=["📚 새 학습 시간", "오늘의 스페인어 수업을 시작해요!", "new_learning"])
+    scheduler.add_job(send_push, "cron", hour=21, minute=0,
+                      args=["📔 일기 쓰기", "오늘 하루를 스페인어로 기록해봐요", "diary"])
+    scheduler.start()
+
+@app.on_event("shutdown")
+async def shutdown():
+    scheduler.shutdown()
+
+
 # ── 헬스체크 ────────────────────────────────────────────────────────
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+# ── 푸시 토큰 등록 ───────────────────────────────────────────────────
+
+@app.post("/register-token")
+async def register_token(req: TokenRequest):
+    save_token(req.token)
+    return {"status": "ok"}
+
+
+# ── 테스트용 즉시 발송 ───────────────────────────────────────────────
+
+@app.post("/push-test")
+async def push_test(learning_type: str = "greeting"):
+    await send_push("🦜 PicoPico 테스트", "알림이 잘 도착했나요?", learning_type)
+    return {"status": "sent", "tokens": len(load_tokens())}
 
 
 @app.get("/curriculum")
