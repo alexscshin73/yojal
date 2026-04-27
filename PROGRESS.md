@@ -7,9 +7,9 @@
 
 ## 현재 상태 (2026-04-27)
 
-**현재 게이트**: 개발 게이트 ✅ 승인 완료 — **MVP 완성**  
-**완료된 마일스톤**: D-01 ~ D-06 (전체 완료)  
-**다음 할 일**: Phase 2 — P2-01 SQLite DB 스키마 (→ PHASE2.md 참고)
+**현재 게이트**: Phase 2 진행 중  
+**완료된 마일스톤**: D-01~D-06 (MVP) + P2-01 + P2-02  
+**다음 할 일**: P2-03 SRS 엔진 (SM-2 알고리즘) → PHASE2.md 참고
 
 ---
 
@@ -40,10 +40,15 @@
 
 ---
 
-## 진행 중 / 대기 중
+## Phase 2 진행 상태
 
-- [x] **D-05**: Cloudflare Tunnel — picopico.carroamix.com ✅
-- [x] **D-06**: 푸시 알림 — APScheduler + Expo Push + 딥링크 ✅
+- [x] **P2-01**: SQLite DB 스키마 (4테이블: users, learning_items, user_progress, study_log, routines) ✅
+- [x] **P2-02**: Learning Item 시드 데이터 (A1-M1 50개 + A1-M2 50개 = 100개) ✅
+- [ ] **P2-03**: SRS 엔진 (SM-2) ← **다음 작업**
+- [ ] **P2-04**: 루틴 설정 화면
+- [ ] **P2-05**: 학습 기록 화면
+- [ ] **P2-06**: 개인화 알림
+- [ ] **P2-07**: 음성 입력 STT
 
 ---
 
@@ -56,6 +61,8 @@
 | 2026-04-24 | SSE 스트리밍 구현 (백엔드 + 앱), 브랜드 PicoPico로 변경, UI 디테일 수정 | 완료 |
 | 2026-04-27 | SSE XHR 수정, D-05 Cloudflare Tunnel (picopico.carroamix.com), 폴더명 yojal→picopico 정리 | 완료 |
 | 2026-04-27 | D-06 푸시 알림 완성 — APScheduler + Expo Push + 딥링크 실기기 확인, **MVP 완성** | 완료 |
+| 2026-04-27 | P2-01 SQLite DB 스키마 — 4테이블 + 멀티유저 JWT 인증 (register/login/me) | 완료 |
+| 2026-04-27 | P2-02 Learning Item 시드 — A1-M1(50) + A1-M2(50) = 100개, GET /items 확인 | 완료 |
 
 ---
 

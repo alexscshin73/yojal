@@ -1,0 +1,755 @@
+"""
+P2-02 Learning Item 시드 데이터
+A1-M1: 준비과정 — 발음 규칙, 관사, 기본 명사, 숫자 (50개)
+A1-M2: CAPÍTULO 1 — 인사, 인칭대명사, ser 동사, 형용사, 의문사 (50개)
+"""
+
+import json
+from database import get_db
+
+SEED_ITEMS = [
+
+    # ──────────────────────────────────────────────
+    # A1-M1: 준비과정 (50개)
+    # ──────────────────────────────────────────────
+
+    # 발음 규칙 (7개)
+    {"id": "a1-m1-001", "level": "A1", "module_id": "A1-M1", "type": "grammar",
+     "content": "h → 묵음 (항상 발음하지 않음)",
+     "meaning": "h는 소리가 없다",
+     "example_1": "hola [올라] — 안녕",
+     "example_2": "hablar [아블라르] — 말하다",
+     "tags": ["발음", "알파벳"]},
+
+    {"id": "a1-m1-002", "level": "A1", "module_id": "A1-M1", "type": "grammar",
+     "content": "ñ → [냐/녜/니/뇨/뉴]",
+     "meaning": "ñ은 한국어 ㄴ+야 계열 소리",
+     "example_1": "España [에스빠냐] — 스페인",
+     "example_2": "mañana [마냐나] — 내일 / 아침",
+     "tags": ["발음", "알파벳"]},
+
+    {"id": "a1-m1-003", "level": "A1", "module_id": "A1-M1", "type": "grammar",
+     "content": "rr → 강하게 굴리는 r 발음",
+     "meaning": "rr은 혀를 강하게 떨어서 발음",
+     "example_1": "perro [뻬로] — 개",
+     "example_2": "arroz [아로스] — 쌀",
+     "tags": ["발음", "알파벳"]},
+
+    {"id": "a1-m1-004", "level": "A1", "module_id": "A1-M1", "type": "grammar",
+     "content": "c + e/i → [s] 또는 [θ]",
+     "meaning": "c는 e/i 앞에서 ㅅ 계열로 발음",
+     "example_1": "cielo [씨엘로] — 하늘",
+     "example_2": "cena [쎄나] — 저녁 식사",
+     "tags": ["발음", "자음"]},
+
+    {"id": "a1-m1-005", "level": "A1", "module_id": "A1-M1", "type": "grammar",
+     "content": "g + e/i → [x] (강한 ㅎ)",
+     "meaning": "g는 e/i 앞에서 강한 ㅎ 소리",
+     "example_1": "general [헤네랄] — 일반적인",
+     "example_2": "gente [헨떼] — 사람들",
+     "tags": ["발음", "자음"]},
+
+    {"id": "a1-m1-006", "level": "A1", "module_id": "A1-M1", "type": "grammar",
+     "content": "que/qui → [께/끼] (u는 묵음)",
+     "meaning": "qu 조합에서 u는 발음하지 않음",
+     "example_1": "qué [께] — 무엇",
+     "example_2": "quiero [끼에로] — 나는 원한다",
+     "tags": ["발음", "자음"]},
+
+    {"id": "a1-m1-007", "level": "A1", "module_id": "A1-M1", "type": "grammar",
+     "content": "강세 규칙: 모음/n/s로 끝나면 끝에서 두 번째 음절",
+     "meaning": "강세표(´)가 없을 때 기본 강세 위치",
+     "example_1": "casa [CA-sa] — 집",
+     "example_2": "hablan [HA-blan] — 그들은 말한다",
+     "tags": ["발음", "강세"]},
+
+    # 정관사 (4개)
+    {"id": "a1-m1-008", "level": "A1", "module_id": "A1-M1", "type": "grammar",
+     "content": "el",
+     "meaning": "정관사 남성 단수 (the)",
+     "example_1": "el libro — 그 책",
+     "example_2": "el chico — 그 소년",
+     "tags": ["관사", "문법"]},
+
+    {"id": "a1-m1-009", "level": "A1", "module_id": "A1-M1", "type": "grammar",
+     "content": "la",
+     "meaning": "정관사 여성 단수 (the)",
+     "example_1": "la casa — 그 집",
+     "example_2": "la chica — 그 소녀",
+     "tags": ["관사", "문법"]},
+
+    {"id": "a1-m1-010", "level": "A1", "module_id": "A1-M1", "type": "grammar",
+     "content": "los / las",
+     "meaning": "정관사 복수 (the) — los 남성, las 여성",
+     "example_1": "los libros — 그 책들",
+     "example_2": "las casas — 그 집들",
+     "tags": ["관사", "문법"]},
+
+    {"id": "a1-m1-011", "level": "A1", "module_id": "A1-M1", "type": "grammar",
+     "content": "un / una",
+     "meaning": "부정관사 단수 (a/an) — un 남성, una 여성",
+     "example_1": "un libro — 책 한 권",
+     "example_2": "una casa — 집 한 채",
+     "tags": ["관사", "문법"]},
+
+    # 기본 남성 명사 (10개)
+    {"id": "a1-m1-012", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "libro",
+     "meaning": "책 (남성)",
+     "example_1": "Tengo un libro. — 나는 책이 있다.",
+     "example_2": "El libro es interesante. — 그 책은 재미있다.",
+     "tags": ["명사", "남성", "물건"]},
+
+    {"id": "a1-m1-013", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "coche",
+     "meaning": "자동차 (남성)",
+     "example_1": "Tengo un coche rojo. — 나는 빨간 자동차가 있다.",
+     "example_2": "El coche es nuevo. — 그 자동차는 새것이다.",
+     "tags": ["명사", "남성", "교통"]},
+
+    {"id": "a1-m1-014", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "perro",
+     "meaning": "개 (남성)",
+     "example_1": "Tengo un perro. — 나는 개가 있다.",
+     "example_2": "El perro es grande. — 그 개는 크다.",
+     "tags": ["명사", "남성", "동물"]},
+
+    {"id": "a1-m1-015", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "gato",
+     "meaning": "고양이 (남성)",
+     "example_1": "El gato duerme. — 고양이가 잔다.",
+     "example_2": "Tengo dos gatos. — 나는 고양이 두 마리가 있다.",
+     "tags": ["명사", "남성", "동물"]},
+
+    {"id": "a1-m1-016", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "café",
+     "meaning": "커피 / 카페 (남성)",
+     "example_1": "Quiero un café. — 커피 한 잔 주세요.",
+     "example_2": "El café está caliente. — 커피가 뜨겁다.",
+     "tags": ["명사", "남성", "음식"]},
+
+    {"id": "a1-m1-017", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "banco",
+     "meaning": "은행 / 벤치 (남성)",
+     "example_1": "El banco está cerrado. — 은행이 닫혀 있다.",
+     "example_2": "Hay un banco cerca. — 근처에 은행이 있다.",
+     "tags": ["명사", "남성", "장소"]},
+
+    {"id": "a1-m1-018", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "mercado",
+     "meaning": "시장 (남성)",
+     "example_1": "Voy al mercado. — 나는 시장에 간다.",
+     "example_2": "El mercado abre a las ocho. — 시장은 8시에 연다.",
+     "tags": ["명사", "남성", "장소"]},
+
+    {"id": "a1-m1-019", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "teléfono",
+     "meaning": "전화기 (남성)",
+     "example_1": "Mi teléfono es nuevo. — 내 전화기는 새것이다.",
+     "example_2": "¿Tienes teléfono? — 전화기 있어?",
+     "tags": ["명사", "남성", "물건"]},
+
+    {"id": "a1-m1-020", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "trabajo",
+     "meaning": "일 / 직장 (남성)",
+     "example_1": "Tengo mucho trabajo. — 일이 많다.",
+     "example_2": "Mi trabajo es interesante. — 내 일은 흥미롭다.",
+     "tags": ["명사", "남성", "직업"]},
+
+    {"id": "a1-m1-021", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "tiempo",
+     "meaning": "시간 / 날씨 (남성)",
+     "example_1": "No tengo tiempo. — 시간이 없다.",
+     "example_2": "El tiempo está bien. — 날씨가 좋다.",
+     "tags": ["명사", "남성", "시간"]},
+
+    # 기본 여성 명사 (10개)
+    {"id": "a1-m1-022", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "casa",
+     "meaning": "집 (여성)",
+     "example_1": "Mi casa es grande. — 내 집은 크다.",
+     "example_2": "Estoy en casa. — 나는 집에 있다.",
+     "tags": ["명사", "여성", "장소"]},
+
+    {"id": "a1-m1-023", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "mesa",
+     "meaning": "책상 / 테이블 (여성)",
+     "example_1": "La mesa es de madera. — 테이블은 나무로 만들어졌다.",
+     "example_2": "Hay libros en la mesa. — 테이블 위에 책들이 있다.",
+     "tags": ["명사", "여성", "가구"]},
+
+    {"id": "a1-m1-024", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "ciudad",
+     "meaning": "도시 (여성)",
+     "example_1": "Vivo en una ciudad grande. — 나는 큰 도시에 산다.",
+     "example_2": "La ciudad es bonita. — 도시가 예쁘다.",
+     "tags": ["명사", "여성", "장소"]},
+
+    {"id": "a1-m1-025", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "escuela",
+     "meaning": "학교 (여성)",
+     "example_1": "Voy a la escuela. — 나는 학교에 간다.",
+     "example_2": "La escuela está cerca. — 학교가 가깝다.",
+     "tags": ["명사", "여성", "장소"]},
+
+    {"id": "a1-m1-026", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "agua",
+     "meaning": "물 (여성, el agua로 씀)",
+     "example_1": "Quiero agua, por favor. — 물 주세요.",
+     "example_2": "El agua está fría. — 물이 차갑다.",
+     "tags": ["명사", "여성", "음식"]},
+
+    {"id": "a1-m1-027", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "comida",
+     "meaning": "음식 / 식사 (여성)",
+     "example_1": "La comida está rica. — 음식이 맛있다.",
+     "example_2": "¿Qué hay de comida? — 어떤 음식이 있어?",
+     "tags": ["명사", "여성", "음식"]},
+
+    {"id": "a1-m1-028", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "tienda",
+     "meaning": "가게 (여성)",
+     "example_1": "La tienda está abierta. — 가게가 열려 있다.",
+     "example_2": "Voy a la tienda. — 나는 가게에 간다.",
+     "tags": ["명사", "여성", "장소"]},
+
+    {"id": "a1-m1-029", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "tarde",
+     "meaning": "오후 / 늦은 (여성)",
+     "example_1": "Buenas tardes. — 안녕하세요 (오후).",
+     "example_2": "Es muy tarde. — 너무 늦었다.",
+     "tags": ["명사", "여성", "시간"]},
+
+    {"id": "a1-m1-030", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "noche",
+     "meaning": "밤 (여성)",
+     "example_1": "Buenas noches. — 안녕히 주무세요.",
+     "example_2": "La noche es fría. — 밤이 춥다.",
+     "tags": ["명사", "여성", "시간"]},
+
+    {"id": "a1-m1-031", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "mañana",
+     "meaning": "아침 / 내일 (여성/부사)",
+     "example_1": "Buenos días, ¡buena mañana! — 좋은 아침!",
+     "example_2": "Hasta mañana. — 내일 봐.",
+     "tags": ["명사", "여성", "시간"]},
+
+    # 숫자 1-10 (10개)
+    {"id": "a1-m1-032", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "uno / una",
+     "meaning": "1 (하나)",
+     "example_1": "Tengo un hijo. — 아이가 하나 있다.",
+     "example_2": "Una persona. — 한 명.",
+     "tags": ["숫자"]},
+
+    {"id": "a1-m1-033", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "dos",
+     "meaning": "2 (둘)",
+     "example_1": "Tengo dos gatos. — 고양이 두 마리.",
+     "example_2": "Son las dos. — 2시야.",
+     "tags": ["숫자"]},
+
+    {"id": "a1-m1-034", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "tres",
+     "meaning": "3 (셋)",
+     "example_1": "Tres personas. — 세 명.",
+     "example_2": "Son las tres. — 3시야.",
+     "tags": ["숫자"]},
+
+    {"id": "a1-m1-035", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "cuatro",
+     "meaning": "4 (넷)",
+     "example_1": "Cuatro días. — 나흘.",
+     "example_2": "Somos cuatro. — 우리는 네 명이야.",
+     "tags": ["숫자"]},
+
+    {"id": "a1-m1-036", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "cinco",
+     "meaning": "5 (다섯)",
+     "example_1": "Cinco minutos. — 5분.",
+     "example_2": "Tengo cinco euros. — 5유로가 있다.",
+     "tags": ["숫자"]},
+
+    {"id": "a1-m1-037", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "seis",
+     "meaning": "6 (여섯)",
+     "example_1": "Son las seis. — 6시야.",
+     "example_2": "Seis meses. — 6개월.",
+     "tags": ["숫자"]},
+
+    {"id": "a1-m1-038", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "siete",
+     "meaning": "7 (일곱)",
+     "example_1": "Siete días a la semana. — 일주일은 7일.",
+     "example_2": "Son las siete. — 7시야.",
+     "tags": ["숫자"]},
+
+    {"id": "a1-m1-039", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "ocho",
+     "meaning": "8 (여덟)",
+     "example_1": "Son las ocho. — 8시야.",
+     "example_2": "Ocho horas. — 8시간.",
+     "tags": ["숫자"]},
+
+    {"id": "a1-m1-040", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "nueve",
+     "meaning": "9 (아홉)",
+     "example_1": "Son las nueve. — 9시야.",
+     "example_2": "Nueve personas. — 아홉 명.",
+     "tags": ["숫자"]},
+
+    {"id": "a1-m1-041", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "diez",
+     "meaning": "10 (열)",
+     "example_1": "Son las diez. — 10시야.",
+     "example_2": "Diez euros. — 10유로.",
+     "tags": ["숫자"]},
+
+    # 기본 색상 (9개)
+    {"id": "a1-m1-042", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "rojo / roja",
+     "meaning": "빨간",
+     "example_1": "Una manzana roja. — 빨간 사과.",
+     "example_2": "El coche es rojo. — 차가 빨간색이다.",
+     "tags": ["형용사", "색상"]},
+
+    {"id": "a1-m1-043", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "azul",
+     "meaning": "파란 (남녀 동형)",
+     "example_1": "El cielo es azul. — 하늘은 파란색이다.",
+     "example_2": "Una camisa azul. — 파란 셔츠.",
+     "tags": ["형용사", "색상"]},
+
+    {"id": "a1-m1-044", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "verde",
+     "meaning": "초록색 (남녀 동형)",
+     "example_1": "El árbol es verde. — 나무는 초록색이다.",
+     "example_2": "Una manzana verde. — 초록 사과.",
+     "tags": ["형용사", "색상"]},
+
+    {"id": "a1-m1-045", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "blanco / blanca",
+     "meaning": "흰색의",
+     "example_1": "Una camisa blanca. — 흰 셔츠.",
+     "example_2": "La nieve es blanca. — 눈은 하얗다.",
+     "tags": ["형용사", "색상"]},
+
+    {"id": "a1-m1-046", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "negro / negra",
+     "meaning": "검은색의",
+     "example_1": "Un gato negro. — 검은 고양이.",
+     "example_2": "Zapatos negros. — 검은 신발.",
+     "tags": ["형용사", "색상"]},
+
+    {"id": "a1-m1-047", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "amarillo / amarilla",
+     "meaning": "노란색의",
+     "example_1": "Un taxi amarillo. — 노란 택시.",
+     "example_2": "El sol es amarillo. — 태양은 노란색이다.",
+     "tags": ["형용사", "색상"]},
+
+    {"id": "a1-m1-048", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "grande",
+     "meaning": "큰 (남녀 동형)",
+     "example_1": "Una ciudad grande. — 큰 도시.",
+     "example_2": "El perro es grande. — 개가 크다.",
+     "tags": ["형용사", "크기"]},
+
+    {"id": "a1-m1-049", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "pequeño / pequeña",
+     "meaning": "작은",
+     "example_1": "Una casa pequeña. — 작은 집.",
+     "example_2": "El gato es pequeño. — 고양이는 작다.",
+     "tags": ["형용사", "크기"]},
+
+    {"id": "a1-m1-050", "level": "A1", "module_id": "A1-M1", "type": "word",
+     "content": "nuevo / nueva",
+     "meaning": "새로운",
+     "example_1": "Un libro nuevo. — 새 책.",
+     "example_2": "Mi coche es nuevo. — 내 차는 새것이다.",
+     "tags": ["형용사"]},
+
+
+    # ──────────────────────────────────────────────
+    # A1-M2: CAPÍTULO 1 — 인사, 인칭대명사, ser (50개)
+    # ──────────────────────────────────────────────
+
+    # 인사 표현 (12개)
+    {"id": "a1-m2-001", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "Hola",
+     "meaning": "안녕 (시간 무관)",
+     "example_1": "¡Hola, Antonio! — 안녕, 안토니오!",
+     "example_2": "Hola, ¿qué tal? — 안녕, 어떻게 지내?",
+     "tags": ["인사", "A1"]},
+
+    {"id": "a1-m2-002", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "Buenos días",
+     "meaning": "좋은 아침입니다 (오전 인사)",
+     "example_1": "Buenos días, profesor. — 안녕하세요, 선생님.",
+     "example_2": "Buenos días a todos. — 모두 안녕하세요.",
+     "tags": ["인사", "A1"]},
+
+    {"id": "a1-m2-003", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "Buenas tardes",
+     "meaning": "좋은 오후입니다 (오후 인사)",
+     "example_1": "Buenas tardes, señora. — 안녕하세요, 부인.",
+     "example_2": "Buenas tardes, ¿cómo está? — 안녕하세요, 어떻게 지내세요?",
+     "tags": ["인사", "A1"]},
+
+    {"id": "a1-m2-004", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "Buenas noches",
+     "meaning": "좋은 밤입니다 / 잘 자요 (저녁 인사)",
+     "example_1": "Buenas noches, hasta mañana. — 잘 자요, 내일 봐요.",
+     "example_2": "Buenas noches a todos. — 모두 안녕히 주무세요.",
+     "tags": ["인사", "A1"]},
+
+    {"id": "a1-m2-005", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "¿Qué tal?",
+     "meaning": "어떻게 지내? (안부 인사)",
+     "example_1": "¡Hola! ¿Qué tal? — 안녕! 어떻게 지내?",
+     "example_2": "¿Qué tal estás? — 어떻게 지내고 있어?",
+     "tags": ["인사", "안부", "A1"]},
+
+    {"id": "a1-m2-006", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "Bien, gracias",
+     "meaning": "잘 지내, 고마워",
+     "example_1": "Bien, gracias. ¿Y tú? — 잘 지내, 고마워. 너는?",
+     "example_2": "Muy bien, gracias. — 아주 잘 지내, 고마워.",
+     "tags": ["인사", "안부", "A1"]},
+
+    {"id": "a1-m2-007", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "¿Y tú? / ¿Y usted?",
+     "meaning": "너는? / 당신은? (되묻기)",
+     "example_1": "Bien. ¿Y tú? — 잘 지내. 너는?",
+     "example_2": "Bien, gracias. ¿Y usted? — 잘 지내요. 당신은요?",
+     "tags": ["인사", "안부", "A1"]},
+
+    {"id": "a1-m2-008", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "Adiós",
+     "meaning": "안녕 / 잘 가 (작별)",
+     "example_1": "Adiós, hasta luego. — 안녕, 나중에 봐.",
+     "example_2": "¡Adiós a todos! — 모두 안녕!",
+     "tags": ["인사", "작별", "A1"]},
+
+    {"id": "a1-m2-009", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "Hasta luego",
+     "meaning": "나중에 봐 (작별)",
+     "example_1": "Hasta luego, Carmen. — 나중에 봐, 카르멘.",
+     "example_2": "Hasta luego y buen viaje. — 나중에 봐, 좋은 여행 해.",
+     "tags": ["인사", "작별", "A1"]},
+
+    {"id": "a1-m2-010", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "Hasta mañana",
+     "meaning": "내일 봐",
+     "example_1": "Hasta mañana, profesor. — 내일 봐요, 선생님.",
+     "example_2": "¡Hasta mañana! — 내일 봐!",
+     "tags": ["인사", "작별", "A1"]},
+
+    {"id": "a1-m2-011", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "Mucho gusto",
+     "meaning": "만나서 반갑습니다",
+     "example_1": "Mucho gusto, me llamo Luis. — 반갑습니다, 루이스입니다.",
+     "example_2": "El gusto es mío. — 저야말로 반갑습니다.",
+     "tags": ["인사", "소개", "A1"]},
+
+    {"id": "a1-m2-012", "level": "A1", "module_id": "A1-M2", "type": "expression",
+     "content": "Encantado / Encantada",
+     "meaning": "반갑습니다 (남성/여성)",
+     "example_1": "Encantado de conocerte. — 만나서 반가워.",
+     "example_2": "Encantada, soy María. — 반가워요, 마리아예요.",
+     "tags": ["인사", "소개", "A1"]},
+
+    # 인칭대명사 (9개)
+    {"id": "a1-m2-013", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "yo",
+     "meaning": "나 (1인칭 단수)",
+     "example_1": "Yo soy estudiante. — 나는 학생이다.",
+     "example_2": "Yo no entiendo. — 나는 이해 못 해.",
+     "tags": ["인칭대명사", "문법"]},
+
+    {"id": "a1-m2-014", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "tú",
+     "meaning": "너 (2인칭 단수, 친밀)",
+     "example_1": "Tú eres muy simpático. — 너는 정말 친절해.",
+     "example_2": "¿Tú hablas español? — 너 스페인어 해?",
+     "tags": ["인칭대명사", "문법"]},
+
+    {"id": "a1-m2-015", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "él / ella",
+     "meaning": "그 / 그녀 (3인칭 단수)",
+     "example_1": "Él es mi amigo. — 그는 내 친구야.",
+     "example_2": "Ella es profesora. — 그녀는 선생님이야.",
+     "tags": ["인칭대명사", "문법"]},
+
+    {"id": "a1-m2-016", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "usted",
+     "meaning": "당신 (2인칭 존칭, Ud.로 약칭)",
+     "example_1": "¿Cómo está usted? — 어떻게 지내세요?",
+     "example_2": "Usted habla muy bien. — 당신은 아주 잘 말씀하시네요.",
+     "tags": ["인칭대명사", "문법", "존칭"]},
+
+    {"id": "a1-m2-017", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "nosotros / nosotras",
+     "meaning": "우리 (1인칭 복수, 남/여)",
+     "example_1": "Nosotros somos amigos. — 우리는 친구야.",
+     "example_2": "Nosotras somos compañeras. — 우리(여)는 동료야.",
+     "tags": ["인칭대명사", "문법"]},
+
+    {"id": "a1-m2-018", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "vosotros / vosotras",
+     "meaning": "너희들 (2인칭 복수, 스페인에서 사용)",
+     "example_1": "¿Vosotros sois estudiantes? — 너희 학생이야?",
+     "example_2": "Vosotras sois muy simpáticas. — 너희(여)는 정말 친절해.",
+     "tags": ["인칭대명사", "문법"]},
+
+    {"id": "a1-m2-019", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "ellos / ellas",
+     "meaning": "그들 / 그녀들 (3인칭 복수)",
+     "example_1": "Ellos son mis amigos. — 그들은 내 친구들이야.",
+     "example_2": "Ellas son profesoras. — 그녀들은 선생님들이야.",
+     "tags": ["인칭대명사", "문법"]},
+
+    {"id": "a1-m2-020", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "ustedes",
+     "meaning": "당신들 (2인칭 복수 존칭, 중남미에서 일반 복수로도 사용)",
+     "example_1": "¿Cómo están ustedes? — 어떻게 지내세요?",
+     "example_2": "Ustedes son bienvenidos. — 여러분 환영합니다.",
+     "tags": ["인칭대명사", "문법", "존칭"]},
+
+    # ser 동사 (6개)
+    {"id": "a1-m2-021", "level": "A1", "module_id": "A1-M2", "type": "grammar",
+     "content": "soy (yo soy)",
+     "meaning": "나는 ~이다 (ser 1인칭 단수)",
+     "example_1": "Soy estudiante. — 나는 학생이다.",
+     "example_2": "Soy de Corea. — 나는 한국 출신이다.",
+     "tags": ["동사", "ser", "문법"]},
+
+    {"id": "a1-m2-022", "level": "A1", "module_id": "A1-M2", "type": "grammar",
+     "content": "eres (tú eres)",
+     "meaning": "너는 ~이다 (ser 2인칭 단수)",
+     "example_1": "Tú eres muy inteligente. — 너는 아주 똑똑해.",
+     "example_2": "¿Eres estudiante? — 너 학생이야?",
+     "tags": ["동사", "ser", "문법"]},
+
+    {"id": "a1-m2-023", "level": "A1", "module_id": "A1-M2", "type": "grammar",
+     "content": "es (él/ella/usted es)",
+     "meaning": "그/그녀/당신은 ~이다 (ser 3인칭 단수)",
+     "example_1": "Él es médico. — 그는 의사다.",
+     "example_2": "¿Usted es el profesor? — 당신이 선생님이신가요?",
+     "tags": ["동사", "ser", "문법"]},
+
+    {"id": "a1-m2-024", "level": "A1", "module_id": "A1-M2", "type": "grammar",
+     "content": "somos (nosotros somos)",
+     "meaning": "우리는 ~이다 (ser 1인칭 복수)",
+     "example_1": "Somos amigos. — 우리는 친구야.",
+     "example_2": "Somos de España. — 우리는 스페인 출신이야.",
+     "tags": ["동사", "ser", "문법"]},
+
+    {"id": "a1-m2-025", "level": "A1", "module_id": "A1-M2", "type": "grammar",
+     "content": "sois (vosotros sois)",
+     "meaning": "너희는 ~이다 (ser 2인칭 복수, 스페인)",
+     "example_1": "¿Sois estudiantes? — 너희 학생이야?",
+     "example_2": "Vosotros sois muy buenos. — 너희는 정말 잘한다.",
+     "tags": ["동사", "ser", "문법"]},
+
+    {"id": "a1-m2-026", "level": "A1", "module_id": "A1-M2", "type": "grammar",
+     "content": "son (ellos/ellas/ustedes son)",
+     "meaning": "그들은/당신들은 ~이다 (ser 3인칭 복수)",
+     "example_1": "Ellos son médicos. — 그들은 의사들이야.",
+     "example_2": "Ustedes son bienvenidos. — 여러분 환영합니다.",
+     "tags": ["동사", "ser", "문법"]},
+
+    # ser 사용 예문 (5개)
+    {"id": "a1-m2-027", "level": "A1", "module_id": "A1-M2", "type": "sentence",
+     "content": "Yo soy estudiante de español.",
+     "meaning": "나는 스페인어 학생이다.",
+     "example_1": "¿Eres estudiante? Sí, soy estudiante de español. — 학생이야? 응, 스페인어 학생이야.",
+     "example_2": "Yo también soy estudiante. — 나도 학생이야.",
+     "tags": ["ser", "문장", "A1"]},
+
+    {"id": "a1-m2-028", "level": "A1", "module_id": "A1-M2", "type": "sentence",
+     "content": "Él es mi amigo.",
+     "meaning": "그는 나의 친구이다.",
+     "example_1": "Este es Luis. Él es mi amigo. — 이쪽은 루이스야. 내 친구야.",
+     "example_2": "Ella es mi amiga. — 그녀는 내 친구야.",
+     "tags": ["ser", "문장", "A1"]},
+
+    {"id": "a1-m2-029", "level": "A1", "module_id": "A1-M2", "type": "sentence",
+     "content": "Somos de Corea.",
+     "meaning": "우리는 한국 출신이다.",
+     "example_1": "¿De dónde sois? Somos de Corea. — 어디서 왔어? 우리 한국에서 왔어.",
+     "example_2": "Yo soy de Corea también. — 나도 한국 출신이야.",
+     "tags": ["ser", "국적", "문장"]},
+
+    {"id": "a1-m2-030", "level": "A1", "module_id": "A1-M2", "type": "sentence",
+     "content": "¿Eres estudiante?",
+     "meaning": "너 학생이야?",
+     "example_1": "¿Eres estudiante de español? Sí, soy estudiante. — 스페인어 학생이야? 응.",
+     "example_2": "No, no soy estudiante. Soy profesor. — 아니, 학생 아냐. 선생님이야.",
+     "tags": ["ser", "의문문", "A1"]},
+
+    {"id": "a1-m2-031", "level": "A1", "module_id": "A1-M2", "type": "sentence",
+     "content": "Yo también soy estudiante.",
+     "meaning": "나도 학생이야.",
+     "example_1": "¿Eres estudiante? Yo también soy estudiante. — 학생이야? 나도 학생이야.",
+     "example_2": "Ella también es profesora. — 그녀도 선생님이야.",
+     "tags": ["ser", "문장", "también"]},
+
+    # 기본 직업/신분 명사 (7개)
+    {"id": "a1-m2-032", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "estudiante",
+     "meaning": "학생 (남녀 동형)",
+     "example_1": "Soy estudiante. — 나는 학생이야.",
+     "example_2": "Ella es una buena estudiante. — 그녀는 좋은 학생이야.",
+     "tags": ["명사", "직업", "A1"]},
+
+    {"id": "a1-m2-033", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "profesor / profesora",
+     "meaning": "선생님 (남/여)",
+     "example_1": "El profesor explica bien. — 선생님이 잘 설명한다.",
+     "example_2": "Mi profesora es muy simpática. — 내 선생님은 매우 친절해.",
+     "tags": ["명사", "직업", "A1"]},
+
+    {"id": "a1-m2-034", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "médico / médica",
+     "meaning": "의사 (남/여)",
+     "example_1": "Mi padre es médico. — 내 아버지는 의사야.",
+     "example_2": "Quiero ser médica. — 나는 의사가 되고 싶어.",
+     "tags": ["명사", "직업"]},
+
+    {"id": "a1-m2-035", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "amigo / amiga",
+     "meaning": "친구 (남/여)",
+     "example_1": "Él es mi mejor amigo. — 그는 내 가장 친한 친구야.",
+     "example_2": "Tengo muchos amigos. — 친구가 많아.",
+     "tags": ["명사", "사람"]},
+
+    {"id": "a1-m2-036", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "señor / señora / señorita",
+     "meaning": "씨/선생님 (남성) / 부인 / 아가씨",
+     "example_1": "Buenos días, señor García. — 안녕하세요, 가르시아 씨.",
+     "example_2": "¿La señora López? — 로페스 부인?",
+     "tags": ["명사", "존칭", "사람"]},
+
+    {"id": "a1-m2-037", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "español / española",
+     "meaning": "스페인어 / 스페인 사람 / 스페인의",
+     "example_1": "Estudio español. — 나는 스페인어를 공부해.",
+     "example_2": "Él es español. — 그는 스페인 사람이야.",
+     "tags": ["명사", "형용사", "국적"]},
+
+    {"id": "a1-m2-038", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "coreano / coreana",
+     "meaning": "한국어 / 한국 사람 / 한국의",
+     "example_1": "Soy coreano. — 나는 한국 사람이야.",
+     "example_2": "Ella habla coreano. — 그녀는 한국어를 해.",
+     "tags": ["명사", "형용사", "국적"]},
+
+    # 기본 형용사 (6개)
+    {"id": "a1-m2-039", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "simpático / simpática",
+     "meaning": "친절한 / 상냥한",
+     "example_1": "Eres muy simpático. — 너 정말 상냥해.",
+     "example_2": "Mi profesora es simpática. — 내 선생님은 친절해.",
+     "tags": ["형용사", "성격"]},
+
+    {"id": "a1-m2-040", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "inteligente",
+     "meaning": "똑똑한 (남녀 동형)",
+     "example_1": "Ella es muy inteligente. — 그녀는 매우 똑똑해.",
+     "example_2": "Eres inteligente. — 너 똑똑해.",
+     "tags": ["형용사", "성격"]},
+
+    {"id": "a1-m2-041", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "bueno / buena",
+     "meaning": "좋은 / 착한",
+     "example_1": "Es un buen chico. — 좋은 아이야.",
+     "example_2": "¡Buena idea! — 좋은 생각이야!",
+     "tags": ["형용사"]},
+
+    {"id": "a1-m2-042", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "alto / alta",
+     "meaning": "키 큰 / 높은",
+     "example_1": "Mi padre es alto. — 내 아버지는 키가 커.",
+     "example_2": "El edificio es muy alto. — 건물이 매우 높다.",
+     "tags": ["형용사", "외모"]},
+
+    {"id": "a1-m2-043", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "joven",
+     "meaning": "젊은 (남녀 동형)",
+     "example_1": "Ella es muy joven. — 그녀는 매우 젊어.",
+     "example_2": "Soy joven. — 나는 젊어.",
+     "tags": ["형용사", "나이"]},
+
+    {"id": "a1-m2-044", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "interesante",
+     "meaning": "재미있는 / 흥미로운 (남녀 동형)",
+     "example_1": "El libro es interesante. — 책이 재미있어.",
+     "example_2": "¡Qué interesante! — 정말 흥미롭다!",
+     "tags": ["형용사"]},
+
+    # 의문사 (6개)
+    {"id": "a1-m2-045", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "¿Qué?",
+     "meaning": "무엇? / 뭐?",
+     "example_1": "¿Qué es esto? — 이게 뭐야?",
+     "example_2": "¿Qué tal? — 어때?",
+     "tags": ["의문사"]},
+
+    {"id": "a1-m2-046", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "¿Quién?",
+     "meaning": "누구?",
+     "example_1": "¿Quién es él? — 그는 누구야?",
+     "example_2": "¿Quién habla? — 누가 말하는 거야?",
+     "tags": ["의문사"]},
+
+    {"id": "a1-m2-047", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "¿Cómo?",
+     "meaning": "어떻게? / 어때?",
+     "example_1": "¿Cómo te llamas? — 이름이 뭐야?",
+     "example_2": "¿Cómo estás? — 어떻게 지내?",
+     "tags": ["의문사"]},
+
+    {"id": "a1-m2-048", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "¿Dónde?",
+     "meaning": "어디?",
+     "example_1": "¿Dónde vives? — 어디 살아?",
+     "example_2": "¿Dónde está el baño? — 화장실이 어디야?",
+     "tags": ["의문사"]},
+
+    {"id": "a1-m2-049", "level": "A1", "module_id": "A1-M2", "type": "word",
+     "content": "¿Cuántos / Cuántas?",
+     "meaning": "몇 개? / 몇 명?",
+     "example_1": "¿Cuántos años tienes? — 몇 살이야?",
+     "example_2": "¿Cuántas personas hay? — 몇 명 있어?",
+     "tags": ["의문사"]},
+
+    {"id": "a1-m2-050", "level": "A1", "module_id": "A1-M2", "type": "template",
+     "content": "Me llamo ___.",
+     "meaning": "내 이름은 ___이야. (자기소개 패턴)",
+     "example_1": "Me llamo Carlos. ¿Y tú? — 내 이름은 카를로스야. 너는?",
+     "example_2": "Me llamo María. Mucho gusto. — 마리아야. 만나서 반가워.",
+     "tags": ["템플릿", "소개", "A1"]},
+]
+
+
+async def seed_learning_items():
+    """DB에 시드 데이터를 1회 삽입한다 (이미 있으면 건너뜀)."""
+    async with get_db() as db:
+        async with db.execute("SELECT COUNT(*) FROM learning_items") as cur:
+            row = await cur.fetchone()
+            if row[0] >= len(SEED_ITEMS):
+                return  # 이미 시드됨
+
+        for item in SEED_ITEMS:
+            await db.execute(
+                """INSERT OR IGNORE INTO learning_items
+                   (id, level, module_id, type, content, meaning, example_1, example_2, audio_url, tags)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (item["id"], item["level"], item["module_id"], item["type"],
+                 item["content"], item["meaning"],
+                 item.get("example_1"), item.get("example_2"), None,
+                 json.dumps(item.get("tags", []), ensure_ascii=False)),
+            )
+        await db.commit()
+        print(f"[Seed] {len(SEED_ITEMS)}개 Learning Item 삽입 완료")

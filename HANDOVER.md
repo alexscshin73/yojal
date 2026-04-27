@@ -1,15 +1,13 @@
-# HANDOVER — 2026-04-24 (금) → 2026-04-28 (월)
+# HANDOVER — 2026-04-27 기준 현재 상태
 
-> 이 파일을 월요일 세션 시작 전에 읽는다.
-> 읽는 순서: HANDOVER.md → CLAUDE.md → PLANNING.md → PROGRESS.md → FEATURES.md
+> 읽는 순서: HANDOVER.md → CLAUDE.md → PHASE2.md → PROGRESS.md
 
 ---
 
-## 지금 어디까지 됐나
+## 한 줄 요약
 
-MVP의 핵심 기능(채팅 + AI 교정 + 스트리밍)이 완성된 상태다.
-실제 iPhone에서 Expo Go로 접속해 스페인어 AI 대화가 작동한다.
-남은 것은 외부 접속(D-05)과 푸시 알림(D-06) 두 가지뿐이다.
+MVP(D-01~D-06) 완성 후 Phase 2 진입. P2-01(DB 스키마) + P2-02(시드 데이터) 완료.  
+멀티유저 JWT 인증, SQLite 4테이블, A1 모듈 100개 Learning Item 적재 완료.
 
 ---
 
@@ -17,73 +15,22 @@ MVP의 핵심 기능(채팅 + AI 교정 + 스트리밍)이 완성된 상태다.
 
 ### 1. Ollama 켜기 (GPU LLM 서버)
 ```bash
-# scshin 유저 터미널에서 — systemd 서비스 말고 직접 실행
 nohup ollama serve > /tmp/ollama.log 2>&1 &
-
-# 확인
-curl http://localhost:11434/api/tags
+curl http://localhost:11434/api/tags   # 확인
 ```
 
 ### 2. 백엔드 켜기 (FastAPI)
 ```bash
 cd ~/projects/picopico/backend
-nohup python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 > /tmp/picopico_backend.log 2>&1 &
-
-# 확인
-curl http://192.168.100.169:8000/health
+python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+curl http://localhost:8000/health      # {"status":"ok","db":"ok"}
 ```
 
-### 3. 앱 개발 서버 켜기 (Expo)
+### 3. 앱 개발 서버 (Expo)
 ```bash
-# VSCode 터미널에서 실행 — 포트 8081은 VSCode Remote가 선점하므로 8085 사용
 cd ~/projects/picopico/mobile
-npx expo start --port 8085
+npx expo start --port 8085             # 8081은 VSCode Remote 선점
 ```
-
-→ QR 코드가 터미널에 뜨면 iPhone Expo Go로 스캔
-
----
-
-## 이번 주(4/24) 완료된 작업
-
-| 작업 | 내용 |
-|------|------|
-| SSE 스트리밍 | 백엔드에 `/chat/stream`, `/chat/start/stream` 추가. 앱에서 token-by-token 실시간 출력 |
-| 브랜드 변경 | "조잘재잠" → **"PicoPico"** (홈 화면 우측 상단) |
-| 아이콘/텍스트 분리 | 앵무새 🦜 아이콘(20px)과 "PicoPico" 텍스트(14px) 크기 독립 제어 |
-| 백엔드 재시작 | 스트리밍 엔드포인트 포함한 버전으로 교체 완료 |
-
----
-
-## 다음 할 일: D-05 Cloudflare Tunnel
-
-**목표**: 집 밖(모바일 데이터)에서도 앱이 백엔드에 연결되도록
-
-**진행 순서**:
-1. bunny-app의 Cloudflare Tunnel 설정 확인
-   ```bash
-   cat ~/projects/bunny-app/cloudflare-tunnel.yml  # 또는 유사 파일
-   cloudflared tunnel list
-   ```
-2. picopico용 터널 생성 또는 기존 터널에 라우트 추가
-3. `mobile/src/config.ts`의 `API_BASE_URL`을 터널 도메인으로 변경
-   ```typescript
-   export const API_BASE_URL = "https://picopico.your-domain.com";
-   ```
-4. SSE 스트리밍이 터널 통해서도 동작하는지 확인
-   - `Cache-Control: no-cache`, `X-Accel-Buffering: no` 헤더 이미 설정됨
-
-**완료 기준**: 집 밖 모바일 데이터 환경에서 채팅 스트리밍 정상 작동
-
----
-
-## 그 다음: D-06 푸시 알림
-
-**목표**: 루틴 시간에 알림 → 탭하면 해당 학습 타입 채팅으로 진입
-
-**구현할 것**:
-- 백엔드: APScheduler (`pip install apscheduler`) 설치, 시간 기반 Expo Push API 호출
-- 앱: `expo-notifications` 패키지 추가, 권한 요청, 딥링크 처리
 
 ---
 
@@ -92,47 +39,186 @@ npx expo start --port 8085
 | 서비스 | 주소 | 비고 |
 |--------|------|------|
 | Ollama (LLM) | http://localhost:11434 | scshin 유저로 직접 실행 |
-| FastAPI 백엔드 | http://192.168.100.169:8000 | 포트 8000 |
+| FastAPI 백엔드 | http://localhost:8000 | SQLite picopico.db |
+| Cloudflare Tunnel | https://picopico.carroamix.com | 외부 접속용 |
 | Expo Metro | http://192.168.100.169:8085 | 개발 시에만 |
 
-**GPU**: RTX 5090 x2 (CUDA0: 31.3 GiB, CUDA1: 30.8 GiB)  
-**모델**: llama3.3:latest (42GB, num_ctx=4096 필수)
+**GPU**: RTX 5090 x2 / **모델**: llama3.3:latest (42GB, num_ctx=4096)  
+**API_BASE_URL**: `mobile/src/config.ts` → `https://picopico.carroamix.com`
 
 ---
 
-## 파일 구조 핵심
+## 전체 파일 구조
 
 ```
 picopico/
-├── HANDOVER.md          ← 지금 읽는 파일
-├── CLAUDE.md            ← Harness Engineering 규칙
-├── PLANNING.md          ← 기획 결정사항 (브랜드, 아키텍처, 커리큘럼)
-├── PROGRESS.md          ← 진행 상태 + 세션 기록
-├── FEATURES.md          ← 기능별 완료 기준 + 실행 방법
+├── HANDOVER.md          ← 지금 읽는 파일 (세션 시작 시 1순위)
+├── CLAUDE.md            ← Harness Engineering 규칙 + 게이트 정의
+├── PHASE2.md            ← Phase 2 개발 계획 (P2-01~P2-07)
+├── PROGRESS.md          ← 세션별 작업 기록
+├── CURRICULUM_DESIGN.md ← CEFR 커리큘럼 설계 결정사항 (46모듈)
+├── content/
+│   └── basic_Spanish_one_step_markdown_study.md  ← 한국 스페인어 교재 OCR
 │
 ├── backend/
-│   ├── main.py          ← FastAPI 앱 (스트리밍 포함)
+│   ├── main.py          ← FastAPI 앱 진입점 (모든 엔드포인트)
+│   ├── auth.py          ← JWT 발급/검증, bcrypt 비밀번호 해싱
+│   ├── database.py      ← SQLite 연결 + 4테이블 생성
+│   ├── models.py        ← Pydantic 모델 (요청/응답 스키마)
+│   ├── seed.py          ← A1-M1, A1-M2 Learning Item 100개 삽입
 │   ├── prompts.py       ← 6가지 학습 타입 시스템 프롬프트
-│   ├── curriculum.py    ← 20단계 커리큘럼
-│   └── .env             ← OLLAMA_MODEL, NUM_CTX 등
+│   ├── curriculum.py    ← 20단계 커리큘럼 + 레벨별 프롬프트
+│   ├── requirements.txt
+│   ├── .env             ← OLLAMA_MODEL, JWT_SECRET_KEY 등
+│   └── picopico.db      ← SQLite 데이터 (gitignore 권장)
 │
 └── mobile/
+    ├── App.tsx                          ← NavigationContainer + AuthProvider + 푸시 알림 등록
     └── src/
-        ├── config.ts            ← API_BASE_URL 설정
-        ├── types.ts             ← 공통 타입
-        ├── theme.ts             ← 색상 (Teal #00897B)
-        ├── services/api.ts      ← streamStart, streamChat 등
+        ├── config.ts                    ← API_BASE_URL
+        ├── theme.ts                     ← 색상 (Teal #00897B)
+        ├── types.ts                     ← 공통 타입 (ChatMessage, LearningType 등)
+        ├── context/
+        │   └── AuthContext.tsx          ← 전역 인증 상태 (user, token, login/logout)
+        ├── services/
+        │   └── api.ts                   ← streamStart, streamChat, getItems 등
         └── screens/
-            ├── HomeScreen.tsx   ← 홈 (스케줄, 통계)
-            └── ChatScreen.tsx   ← 채팅 (핵심 화면)
+            ├── auth/
+            │   ├── LoginScreen.tsx      ← 이메일+비밀번호 로그인
+            │   └── RegisterScreen.tsx   ← 닉네임+이메일+비밀번호 회원가입
+            ├── HomeScreen.tsx           ← 홈 (학습 타입 선택)
+            ├── ChatScreen.tsx           ← AI 대화 화면 (핵심)
+            ├── RecordsScreen.tsx        ← 학습 기록 (P2-05 대상)
+            └── SettingsScreen.tsx       ← 설정 (P2-04 대상)
 ```
+
+---
+
+## DB 스키마 (4테이블)
+
+```sql
+-- 사용자 계정
+users (id TEXT PK, email UNIQUE, password_hash, nickname, created_at, is_active)
+
+-- 학습 단위 (콘텐츠 원장)
+learning_items (id TEXT PK, level, module_id, type, content, meaning,
+                example_1, example_2, audio_url, tags JSON)
+
+-- 사용자별 SRS 진척도
+user_progress (id, user_id, item_id, stage, interval_days, ease_factor,
+               last_reviewed_at, next_review_at, success_rate)
+              → UNIQUE(user_id, item_id)
+
+-- 학습 로그 (분석용)
+study_log (id, user_id, item_id, action, result, time_spent, created_at)
+
+-- 루틴 설정 (P2-04 대상)
+routines (id, user_id, learning_type, hour, minute, days_of_week JSON, is_active)
+```
+
+---
+
+## API 엔드포인트 전체 목록
+
+### 인증
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/auth/register` | 회원가입 → `{access_token, user}` |
+| POST | `/auth/login` | 로그인 → `{access_token, user}` |
+| GET | `/auth/me` | 내 정보 조회 (Bearer 토큰 필요) |
+
+### 학습 아이템
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/items` | 아이템 목록 (`?level=A1&module_id=A1-M1&type=word`) |
+| POST | `/items` | 아이템 추가 |
+| GET | `/items/count` | 레벨별 아이템 수 |
+
+### AI 채팅
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/chat/start/stream` | 대화 시작 (SSE 스트리밍) |
+| POST | `/chat/stream` | 메시지 전송 (SSE 스트리밍) |
+| POST | `/chat/start` | 대화 시작 (비스트리밍 fallback) |
+| POST | `/chat` | 메시지 전송 (비스트리밍 fallback) |
+
+### 시스템
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/health` | `{"status":"ok","db":"ok"}` |
+| GET | `/curriculum` | 커리큘럼 목록 |
+| POST | `/register-token` | Expo 푸시 토큰 등록 |
+| POST | `/push-test` | 테스트 푸시 발송 |
+
+---
+
+## 인증 흐름
+
+```
+앱 시작
+  ↓
+SecureStore에 토큰 있음?
+  ├── 있음 → GET /auth/me 검증
+  │         ├── 성공 → 메인 앱
+  │         └── 실패 → 토큰 삭제 → 로그인 화면
+  └── 없음 → 로그인 화면
+
+로그인/회원가입 성공
+  → JWT(30일) SecureStore 저장
+  → 메인 앱으로 이동
+```
+
+---
+
+## 학습 아이템 구조
+
+```
+id: "A1-M1-001"
+level: "A1"
+module_id: "A1-M1"
+type: word | grammar | sentence | expression | template
+content: "hola"          ← 스페인어
+meaning: "안녕하세요"      ← 한국어
+example_1: "¡Hola, amigo!"
+example_2: "Hola, ¿cómo estás?"
+tags: ["인사", "기초"]
+```
+
+현재 적재 현황:
+- A1-M1: 50개 (발음 규칙 7 + 관사 4 + 남성명사 10 + 여성명사 10 + 숫자 10 + 색깔/형용사 9)
+- A1-M2: 50개 (인사 12 + 인칭대명사 9 + ser 활용 6 + ser 예문 5 + 직업 7 + 형용사 6 + 의문사 6 + 템플릿 1)
+
+---
+
+## Phase 2 진행 상태
+
+| 태스크 | 내용 | 상태 |
+|--------|------|------|
+| P2-01 | SQLite DB 스키마 (4테이블) | ✅ 완료 |
+| P2-02 | Learning Item 시드 데이터 100개 | ✅ 완료 |
+| P2-03 | SRS 엔진 (SM-2 알고리즘) | ← **다음 작업** |
+| P2-04 | 루틴 설정 화면 | ⏳ 대기 |
+| P2-05 | 학습 기록 화면 | ⏳ 대기 |
+| P2-06 | 개인화 알림 | ⏳ 대기 |
+| P2-07 | 음성 입력 STT | ⏳ 대기 |
+
+---
+
+## P2-03 다음 작업 예고 (SRS 엔진)
+
+구현할 것:
+- `backend/srs.py` — SM-2 알고리즘 (`calculate_next_review`)
+- `GET /review/today` — 오늘 복습 대상 목록 (next_review_at ≤ 오늘)
+- `POST /review/result` — 복습 결과 기록 + interval/ease_factor 재계산
+- `GET /progress/stats` — 단계별 아이템 수, 스트릭
 
 ---
 
 ## 주의사항 (실수하기 쉬운 것들)
 
 1. **Ollama를 systemd로 실행하면 GPU 미감지** → `nohup ollama serve ...`로 직접 실행
-2. **Expo 포트 8081 사용 금지** → VSCode Remote가 선점, 8085 사용
-3. **Ollama API 호출 시 num_ctx 옵션 필수** → 없으면 128K 컨텍스트로 VRAM 터짐
-4. **백엔드 재시작 안 하면 구버전** → 코드 수정 후 반드시 uvicorn 재시작
-5. **llama3.3이 중국어 섞음** → 시스템 프롬프트에 "중국어 절대 금지" 이미 포함됨
+2. **Expo 포트 8081 사용 금지** → VSCode Remote 선점, 8085 사용
+3. **Ollama num_ctx 옵션 필수** → 없으면 128K 컨텍스트로 VRAM 폭발
+4. **bcrypt 직접 사용, passlib 미사용** → passlib+bcrypt4.x 버전 충돌 있음
+5. **pip install 시 `--break-system-packages` 필요** → 시스템 Python3 환경
+6. **JWT_SECRET_KEY는 .env에서 관리** → 기본값은 개발용, 프로덕션 변경 필수

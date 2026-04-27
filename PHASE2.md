@@ -22,7 +22,7 @@
 | ID | 태스크 | 의존 | 상태 |
 |----|--------|------|------|
 | P2-01 | SQLite DB 스키마 | — | ✅ 완료 |
-| P2-02 | Learning Item 시드 데이터 (A1-M1~M2, 200개) | P2-01 | ⏳ 대기 |
+| P2-02 | Learning Item 시드 데이터 (A1-M1~M2, 100개) | P2-01 | ✅ 완료 |
 | P2-03 | SRS 엔진 (SM-2) | P2-01 | ⏳ 대기 |
 | P2-04 | 루틴 설정 화면 (S-07) | P2-01 | ⏳ 대기 |
 | P2-05 | 학습 기록 화면 (S-08) | P2-03 | ⏳ 대기 |
@@ -95,7 +95,7 @@ CREATE TABLE study_log (
 
 **목표**: `content/basic_Spanish_one_step_markdown_study.md` 교재 기반 초기 학습 데이터 입력
 
-**상태**: ⏳ 대기 중 (P2-01 완료 후)
+**상태**: ✅ 완료 (2026-04-27)
 
 ### 시드 데이터 구성 (1차: A1-M1~M2, CURRICULUM_DESIGN.md 기준)
 
@@ -109,9 +109,10 @@ CREATE TABLE study_log (
 - `backend/main.py` — 앱 시작 시 시드 여부 확인 후 1회 실행
 
 ### 완료 기준
-- [ ] `GET /items` → 35개 이상 Learning Item 반환
-- [ ] 레벨별 필터 `GET /items?level=A1` 작동
-- [ ] 타입별 필터 `GET /items?type=word` 작동
+- [x] `GET /items` → 100개 Learning Item 반환
+- [x] 레벨별 필터 `GET /items?level=A1` 작동
+- [x] 타입별 필터 `GET /items?type=word` 작동
+- [x] 모듈별 필터 `GET /items?module_id=A1-M1` → 50개, `A1-M2` → 50개
 
 ---
 
@@ -325,8 +326,8 @@ P2-02 시드 데이터    P2-03 SRS 엔진
 ## 현재 진행 상태
 
 - [x] **P2-01**: SQLite DB 스키마 ✅
-- [ ] **P2-02**: Learning Item 시드 데이터 ← **다음 작업**
-- [ ] **P2-03**: SRS 엔진
+- [x] **P2-02**: Learning Item 시드 데이터 ✅
+- [ ] **P2-03**: SRS 엔진 ← **다음 작업**
 - [ ] **P2-04**: 루틴 설정 화면
 - [ ] **P2-05**: 학습 기록 화면
 - [ ] **P2-06**: 개인화 알림

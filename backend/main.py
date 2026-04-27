@@ -14,6 +14,7 @@ from curriculum import get_level_prompt, CURRICULUM
 from database import init_db, check_db, get_db
 from models import LearningItem, LearningItemCreate, RegisterRequest, LoginRequest, AuthResponse, UserPublic
 from auth import hash_password, verify_password, create_token, new_user_id, get_current_user
+from seed import seed_learning_items
 
 load_dotenv()
 
@@ -176,6 +177,7 @@ async def stream_ollama(messages: list):
 @app.on_event("startup")
 async def startup():
     await init_db()
+    await seed_learning_items()
     scheduler.add_job(send_push, "cron", hour=6, minute=0,
                       args=["🌅 좋은 아침!", "스페인어로 인사해볼까요? ¡Buenos días!", "greeting"])
     scheduler.add_job(send_push, "cron", hour=9, minute=0,
