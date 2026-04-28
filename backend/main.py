@@ -668,6 +668,27 @@ async def progress_stats(user_id: str = Depends(get_current_user)):
     )
 
 
+@app.get("/progress/errors")
+async def progress_errors(user_id: str = Depends(get_current_user)):
+    """자주 틀린 학습 아이템 유형 분석 (상위 3개)."""
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+        async with db.execute(
+            """
+            SELECT li.type, COUNT(*) AS wrong_count
+            FROM study_log sl
+            JOIN learning_items li ON sl.item_id = li.id
+            WHERE sl.user_id = ? AND sl.result = 'wrong'
+            GROUP BY li.type
+            ORDER BY wrong_count DESC
+            LIMIT 3
+            """,
+            (user_id,),
+        ) as cur:
+            rows = await cur.fetchall()
+    return [{"type": r["type"], "count": r["wrong_count"]} for r in rows]
+
+
 # ── 루틴 CRUD ────────────────────────────────────────────────────────
 
 @app.get("/routines", response_model=list[Routine])

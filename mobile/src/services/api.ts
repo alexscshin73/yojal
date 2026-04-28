@@ -138,6 +138,32 @@ export async function deleteRoutine(token: string, id: number): Promise<void> {
   if (!res.ok && res.status !== 204) throw new Error(`서버 오류: ${res.status}`);
 }
 
+// ── 학습 통계 ────────────────────────────────────────────────────
+
+export interface ProgressStats {
+  total_studied: number;
+  by_stage: { study: number; retrieval: number; spacing: number; mastered: number };
+  today_reviewed: number;
+  streak_days: number;
+}
+
+export async function getProgressStats(token: string): Promise<ProgressStats> {
+  const res = await fetch(`${API_BASE_URL}/progress/stats`, { headers: authHeaders(token) });
+  if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
+  return res.json();
+}
+
+export interface ErrorType {
+  type: string;
+  count: number;
+}
+
+export async function getProgressErrors(token: string): Promise<ErrorType[]> {
+  const res = await fetch(`${API_BASE_URL}/progress/errors`, { headers: authHeaders(token) });
+  if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
+  return res.json();
+}
+
 // ── 비스트리밍 fallback (필요시) ─────────────────────────────────
 
 export async function startChat(
