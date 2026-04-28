@@ -1,3 +1,4 @@
+import math
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -21,6 +22,43 @@ from models import (
 from auth import hash_password, verify_password, create_token, new_user_id, get_current_user
 from seed import seed_learning_items
 from srs import calculate_next_review, interval_to_stage
+
+# ── 커리큘럼 진행 순서 + 기본 학습 속도 ────────────────────────────
+MODULE_ORDER = [
+    "A1-M1", "A1-M2", "A1-M3", "A1-M4", "A1-M5",
+    "A2-M1", "A2-M2", "A2-M3", "A2-M4", "A2-M5", "A2-M6", "A2-M7", "A2-M8",
+    "B1-M1", "B1-M2", "B1-M3", "B1-M4", "B1-M5",
+    "B1-M6", "B1-M7", "B1-M8", "B1-M9", "B1-M10",
+    "B2-M1", "B2-M2", "B2-M3", "B2-M4", "B2-M5",
+    "B2-M6", "B2-M7", "B2-M8", "B2-M9", "B2-M10",
+    "C1-M1", "C1-M2", "C1-M3", "C1-M4", "C1-M5", "C1-M6", "C1-M7", "C1-M8",
+    "C2-M1", "C2-M2", "C2-M3", "C2-M4", "C2-M5",
+]
+
+# 365일 시뮬레이션 기반 기본값 (A1:5/A2:4/B1·B2:7/C1·C2:14 개/일)
+DEFAULT_PACE: dict[str, int] = {
+    "A1": 5, "A2": 4, "B1": 7, "B2": 7, "C1": 14, "C2": 14
+}
+
+# 레벨별 전체 아이템 수 (46모듈 × 50개)
+ITEMS_PER_LEVEL: dict[str, int] = {
+    "A1": 250, "A2": 400, "B1": 500, "B2": 500, "C1": 400, "C2": 250
+}
+
+
+async def _get_or_init_pace(db, user_id: str) -> dict:
+    async with db.execute(
+        "SELECT daily_new_per_level FROM user_settings WHERE user_id = ?", (user_id,)
+    ) as cur:
+        row = await cur.fetchone()
+    if row:
+        return json.loads(row["daily_new_per_level"])
+    await db.execute(
+        "INSERT OR IGNORE INTO user_settings (user_id, daily_new_per_level) VALUES (?, ?)",
+        (user_id, json.dumps(DEFAULT_PACE)),
+    )
+    await db.commit()
+    return DEFAULT_PACE.copy()
 
 load_dotenv()
 
@@ -555,9 +593,10 @@ async def review_result(
             (user_id, req.item_id, new_stage, new_interval, new_ef,
              now, next_review_at, round(new_success_rate, 3)),
         )
+        action = "new" if not prog else "retrieval"
         await db.execute(
             "INSERT INTO study_log (user_id, item_id, action, result, time_spent) VALUES (?, ?, ?, ?, ?)",
-            (user_id, req.item_id, "retrieval",
+            (user_id, req.item_id, action,
              "correct" if req.quality >= 3 else "wrong", req.time_spent),
         )
         await db.commit()
@@ -675,3 +714,143 @@ async def delete_routine(routine_id: int, user_id: str = Depends(get_current_use
         await db.commit()
 
     await refresh_scheduler()
+
+
+# ── 학습 진행 시스템 ──────────────────────────────────────────────────
+
+@app.get("/learning/today")
+async def learning_today(
+    user_id: str = Depends(get_current_user),
+):
+    """오늘 학습할 신규 아이템 + SRS 복습 아이템 반환."""
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+
+        pace = await _get_or_init_pace(db, user_id)
+
+        # 현재 모듈: 아직 소개 안 된 아이템이 있는 첫 번째 모듈
+        current_module_id = None
+        module_total = 0
+        module_introduced = 0
+
+        for mid in MODULE_ORDER:
+            async with db.execute(
+                "SELECT COUNT(*) AS cnt FROM learning_items WHERE module_id = ?", (mid,)
+            ) as cur:
+                total_row = await cur.fetchone()
+            if total_row["cnt"] == 0:
+                continue
+
+            async with db.execute(
+                """SELECT COUNT(*) AS cnt FROM learning_items
+                   WHERE module_id = ?
+                   AND id NOT IN (SELECT item_id FROM user_progress WHERE user_id = ?)""",
+                (mid, user_id),
+            ) as cur:
+                unintro_row = await cur.fetchone()
+
+            if unintro_row["cnt"] > 0:
+                current_module_id = mid
+                module_total = total_row["cnt"]
+                module_introduced = module_total - unintro_row["cnt"]
+                break
+
+        if not current_module_id:
+            return {
+                "current_module_id": None, "current_level": None,
+                "daily_new_target": 0, "already_new_today": 0,
+                "new_items": [], "review_items": [],
+                "module_total": 0, "module_introduced": 0,
+                "est_module_completion_days": 0, "all_done": True,
+            }
+
+        current_level = current_module_id.split("-")[0]
+        daily_new_target = pace.get(current_level, DEFAULT_PACE.get(current_level, 5))
+
+        # 오늘 이미 소개한 신규 아이템 수
+        async with db.execute(
+            "SELECT COUNT(*) AS cnt FROM study_log WHERE user_id = ? AND action = 'new' AND date(created_at) = date('now')",
+            (user_id,),
+        ) as cur:
+            already_new_today = (await cur.fetchone())["cnt"]
+
+        remaining_new = max(0, daily_new_target - already_new_today)
+
+        # 신규 아이템 조회
+        new_rows = []
+        if remaining_new > 0:
+            async with db.execute(
+                """SELECT li.* FROM learning_items li
+                   WHERE li.module_id = ?
+                   AND li.id NOT IN (SELECT item_id FROM user_progress WHERE user_id = ?)
+                   ORDER BY li.id LIMIT ?""",
+                (current_module_id, user_id, remaining_new),
+            ) as cur:
+                new_rows = await cur.fetchall()
+
+        # SRS 복습 아이템 조회
+        async with db.execute(
+            """SELECT li.*, up.stage, up.interval_days, up.ease_factor,
+                      up.last_reviewed_at, up.next_review_at, up.success_rate, 0 AS is_new
+               FROM learning_items li
+               JOIN user_progress up ON li.id = up.item_id
+               WHERE up.user_id = ? AND up.next_review_at <= date('now')
+               ORDER BY up.next_review_at ASC LIMIT 50""",
+            (user_id,),
+        ) as cur:
+            review_rows = await cur.fetchall()
+
+    def to_review_item(row, is_new=False):
+        d = dict(row)
+        if is_new:
+            d.update(is_new=True, stage="study", interval_days=1,
+                     ease_factor=2.5, next_review_at=None, success_rate=0.0)
+        return ReviewItem(**d).model_dump()
+
+    items_remaining_in_module = module_total - module_introduced - len(new_rows)
+    est_days = math.ceil(items_remaining_in_module / daily_new_target) if daily_new_target else 999
+
+    return {
+        "current_module_id": current_module_id,
+        "current_level": current_level,
+        "daily_new_target": daily_new_target,
+        "already_new_today": already_new_today,
+        "new_items": [to_review_item(r, True) for r in new_rows],
+        "review_items": [to_review_item(r) for r in review_rows],
+        "module_total": module_total,
+        "module_introduced": module_introduced,
+        "est_module_completion_days": est_days,
+        "all_done": False,
+    }
+
+
+class PaceUpdateRequest(BaseModel):
+    daily_new_per_level: dict
+
+
+def _calc_estimates(pace: dict) -> dict:
+    est = {lv: math.ceil(ITEMS_PER_LEVEL[lv] / pace.get(lv, DEFAULT_PACE[lv]))
+           for lv in ITEMS_PER_LEVEL}
+    est["total"] = sum(est.values())
+    return est
+
+
+@app.get("/settings/pace")
+async def get_pace_settings(user_id: str = Depends(get_current_user)):
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+        pace = await _get_or_init_pace(db, user_id)
+    return {"daily_new_per_level": pace, "estimated_days": _calc_estimates(pace)}
+
+
+@app.patch("/settings/pace")
+async def update_pace_settings(req: PaceUpdateRequest, user_id: str = Depends(get_current_user)):
+    async with get_db() as db:
+        await db.execute(
+            """INSERT INTO user_settings (user_id, daily_new_per_level) VALUES (?, ?)
+               ON CONFLICT(user_id) DO UPDATE SET daily_new_per_level = excluded.daily_new_per_level""",
+            (user_id, json.dumps(req.daily_new_per_level)),
+        )
+        await db.commit()
+    return {"daily_new_per_level": req.daily_new_per_level,
+            "estimated_days": _calc_estimates(req.daily_new_per_level)}

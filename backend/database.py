@@ -66,6 +66,14 @@ _CREATE_TABLES = [
         is_active       INTEGER NOT NULL DEFAULT 1
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS user_settings (
+        user_id              TEXT PRIMARY KEY,
+        daily_new_per_level  TEXT NOT NULL
+            DEFAULT '{"A1":5,"A2":4,"B1":7,"B2":7,"C1":14,"C2":14}',
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """,
 ]
 
 

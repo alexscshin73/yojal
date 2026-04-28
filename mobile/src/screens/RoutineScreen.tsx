@@ -312,13 +312,14 @@ const styles = StyleSheet.create({
   typeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   typeChip: {
     flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: 12, paddingVertical: 8,
+    paddingHorizontal: 10, paddingVertical: 8,
     borderRadius: 20, borderWidth: 1.5, borderColor: colors.border,
     backgroundColor: colors.surface,
+    flexShrink: 0,
   },
   typeChipActive: { borderColor: colors.primary, backgroundColor: "#E0F2F1" },
-  typeEmoji: { fontSize: 14 },
-  typeLabel: { fontSize: 13, color: colors.textSecondary },
+  typeEmoji: { fontSize: 13 },
+  typeLabel: { fontSize: 12, color: colors.textSecondary, flexShrink: 0 },
   typeLabelActive: { color: colors.primary, fontWeight: "600" },
   modalButtons: { flexDirection: "row", gap: 12, marginTop: 24 },
   cancelBtn: {
