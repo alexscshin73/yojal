@@ -103,47 +103,66 @@ class TokenRequest(BaseModel):
 
 
 # ── 푸시 토큰 저장소 ─────────────────────────────────────────────────
-TOKENS_FILE = Path("/tmp/picopico_tokens.json")
+# ── 푸시 알림 문구 ───────────────────────────────────────────────────
+PUSH_TITLES = {
+    "greeting":     "🌅 좋은 아침!",
+    "new_learning": "📚 새 학습 시간",
+    "review":       "🔄 복습 시간",
+    "diary":        "📔 일기 쓰기",
+}
 
-def load_tokens() -> list[str]:
-    if TOKENS_FILE.exists():
-        return json.loads(TOKENS_FILE.read_text())
-    return []
-
-def save_token(token: str):
-    tokens = load_tokens()
-    if token not in tokens:
-        tokens.append(token)
-        TOKENS_FILE.write_text(json.dumps(tokens))
-
-
-# ── 학습 타입별 푸시 문구 ────────────────────────────────────────────
-PUSH_CONTENT = {
-    "greeting":      ("🌅 좋은 아침!", "스페인어로 인사해볼까요? ¡Buenos días!"),
-    "situational":   ("🗣 상황 단어 학습", "오늘의 상황 단어 학습을 시작해요!"),
-    "new_learning":  ("📚 새 학습 시간", "오늘의 스페인어 수업을 시작해요!"),
-    "review":        ("🔄 복습 시간", "배운 내용을 복습해볼까요?"),
-    "mistake_review":("❌ 오답 복습", "틀렸던 문제를 다시 풀어봐요"),
-    "diary":         ("📔 일기 쓰기", "오늘 하루를 스페인어로 기록해봐요"),
+PUSH_FALLBACK_BODY = {
+    "greeting":     "스페인어로 인사해볼까요? ¡Buenos días!",
+    "new_learning": "오늘의 스페인어 수업을 시작해요!",
+    "review":       "배운 내용을 복습해볼까요?",
+    "diary":        "오늘 하루를 스페인어로 기록해봐요",
 }
 
 
+def build_push_content(learning_type: str, review_count: int) -> tuple[str, str]:
+    title = PUSH_TITLES.get(learning_type, "🦜 PicoPico")
+    if review_count > 0:
+        body = f"복습할 표현이 {review_count}개 있어요. 지금 시작해볼까요? 💪"
+    else:
+        body = PUSH_FALLBACK_BODY.get(learning_type, "학습 시간이에요!")
+    return title, body
+
+
 # ── Expo Push 발송 ───────────────────────────────────────────────────
-async def send_push(title: str, body: str, learning_type: str):
-    tokens = load_tokens()
-    if not tokens:
-        return
-    messages = [
-        {"to": t, "title": title, "body": body,
-         "data": {"learningType": learning_type}, "sound": "default"}
-        for t in tokens
-    ]
+
+async def _send_expo_push(messages: list[dict]):
     async with httpx.AsyncClient() as client:
         await client.post(
             "https://exp.host/--/api/v2/push/send",
             json=messages,
             headers={"Content-Type": "application/json"},
         )
+
+
+async def fire_push_for_type(learning_type: str):
+    """모든 등록 유저에게 복습 수 포함 동적 알림 발송."""
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+        async with db.execute("SELECT user_id, push_token FROM user_push_tokens") as cur:
+            users = await cur.fetchall()
+        if not users:
+            return
+        messages = []
+        for u in users:
+            async with db.execute(
+                "SELECT COUNT(*) AS cnt FROM user_progress WHERE user_id = ? AND next_review_at <= date('now')",
+                (u["user_id"],),
+            ) as cur:
+                row = await cur.fetchone()
+            review_count = row["cnt"] if row else 0
+            title, body = build_push_content(learning_type, review_count)
+            deep_link = "review" if review_count > 0 else learning_type
+            messages.append({
+                "to": u["push_token"], "title": title, "body": body,
+                "data": {"learningType": deep_link}, "sound": "default",
+            })
+    if messages:
+        await _send_expo_push(messages)
 
 
 app = FastAPI(title="PicoPico API", version="0.1.0")
@@ -178,23 +197,23 @@ async def refresh_scheduler():
 
     for row in rows:
         lt = row["learning_type"]
-        title, body = PUSH_CONTENT.get(lt, ("🦜 PicoPico", "학습 시간이에요!"))
         job_id = f"routine_{row['hour']}_{row['minute']}_{lt}"
         scheduler.add_job(
-            send_push, "cron",
+            fire_push_for_type, "cron",
             hour=row["hour"], minute=row["minute"],
             id=job_id, replace_existing=True,
-            args=[title, body, lt],
+            args=[lt],
         )
 
 
 def _add_default_jobs():
-    scheduler.add_job(send_push, "cron", hour=6, minute=0, id="default_greeting", replace_existing=True,
-                      args=["🌅 좋은 아침!", "스페인어로 인사해볼까요? ¡Buenos días!", "greeting"])
-    scheduler.add_job(send_push, "cron", hour=9, minute=0, id="default_new_learning", replace_existing=True,
-                      args=["📚 새 학습 시간", "오늘의 스페인어 수업을 시작해요!", "new_learning"])
-    scheduler.add_job(send_push, "cron", hour=21, minute=0, id="default_diary", replace_existing=True,
-                      args=["📔 일기 쓰기", "오늘 하루를 스페인어로 기록해봐요", "diary"])
+    for lt, h, m in [("greeting", 6, 0), ("new_learning", 9, 0), ("diary", 21, 0)]:
+        scheduler.add_job(
+            fire_push_for_type, "cron",
+            hour=h, minute=m,
+            id=f"default_{lt}", replace_existing=True,
+            args=[lt],
+        )
 
 app.add_middleware(
     CORSMiddleware,
@@ -409,17 +428,28 @@ async def count_items():
 # ── 푸시 토큰 등록 ───────────────────────────────────────────────────
 
 @app.post("/register-token")
-async def register_token(req: TokenRequest):
-    save_token(req.token)
+async def register_token(req: TokenRequest, user_id: str = Depends(get_current_user)):
+    async with get_db() as db:
+        await db.execute(
+            """
+            INSERT INTO user_push_tokens (user_id, push_token, updated_at)
+            VALUES (?, ?, datetime('now'))
+            ON CONFLICT(user_id) DO UPDATE SET
+                push_token = excluded.push_token,
+                updated_at = excluded.updated_at
+            """,
+            (user_id, req.token),
+        )
+        await db.commit()
     return {"status": "ok"}
 
 
 # ── 테스트용 즉시 발송 ───────────────────────────────────────────────
 
 @app.post("/push-test")
-async def push_test(learning_type: str = "greeting"):
-    await send_push("🦜 PicoPico 테스트", "알림이 잘 도착했나요?", learning_type)
-    return {"status": "sent", "tokens": len(load_tokens())}
+async def push_test(learning_type: str = "greeting", user_id: str = Depends(get_current_user)):
+    await fire_push_for_type(learning_type)
+    return {"status": "sent"}
 
 
 @app.get("/curriculum")

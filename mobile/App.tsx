@@ -92,6 +92,24 @@ function TabNavigator() {
 function RootNavigator() {
   const { user, token, isLoading } = useAuth();
 
+  // 로그인 후 JWT와 함께 push 토큰을 백엔드에 등록
+  useEffect(() => {
+    if (!token) return;
+    registerForPushNotifications()
+      .then((pushToken) => {
+        if (!pushToken) return;
+        fetch(`${API_BASE_URL}/register-token`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ token: pushToken }),
+        }).catch((e) => console.log("[Push] 백엔드 등록 실패:", e));
+      })
+      .catch((e) => console.log("[Push] 토큰 발급 실패:", e));
+  }, [token]);
+
   // 토큰 검증 중 스플래시
   if (isLoading) {
     return (
@@ -124,24 +142,12 @@ function RootNavigator() {
 
 export default function App() {
   useEffect(() => {
-    registerForPushNotifications()
-      .then((token) => {
-        if (!token) { console.log("[Push] 토큰 없음"); return; }
-        fetch(`${API_BASE_URL}/register-token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-        }).catch((e) => console.log("[Push] 백엔드 등록 실패:", e));
-      })
-      .catch((e) => console.log("[Push] 토큰 발급 실패:", e));
-
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const learningType = response.notification.request.content.data?.learningType;
       if (learningType && navigationRef.isReady()) {
         navigationRef.navigate("Chat", { learningType });
       }
     });
-
     return () => sub.remove();
   }, []);
 

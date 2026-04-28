@@ -74,6 +74,14 @@ _CREATE_TABLES = [
         FOREIGN KEY (user_id) REFERENCES users(id)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS user_push_tokens (
+        user_id    TEXT PRIMARY KEY,
+        push_token TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """,
 ]
 
 
