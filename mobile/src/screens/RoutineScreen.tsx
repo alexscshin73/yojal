@@ -165,36 +165,32 @@ export default function RoutineScreen({ navigation }: any) {
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>루틴 추가</Text>
 
-            {/* 시간 선택 — 가로 스테퍼 */}
+            {/* 시간 선택 — ▲▼ 피커 */}
             <Text style={styles.sectionLabel}>시간</Text>
-            <View style={styles.timeDisplay}>
-              <Text style={styles.timePreview}>
-                {String(selHour).padStart(2, "0")}:{String(selMinute).padStart(2, "0")}
-              </Text>
-            </View>
-            <View style={styles.stepperRow}>
-              <Text style={styles.stepperLabel}>시</Text>
-              <TouchableOpacity onPress={() => setSelHour((h) => (h + 23) % 24)} style={styles.stepBtn}>
-                <Text style={styles.stepBtnText}>−</Text>
-              </TouchableOpacity>
-              <View style={styles.stepValueBox}>
-                <Text style={styles.stepValue}>{String(selHour).padStart(2, "0")}</Text>
+            <View style={styles.timePicker}>
+              <View style={styles.timeUnit}>
+                <TouchableOpacity onPress={() => setSelHour((h) => (h + 1) % 24)} style={styles.arrow}>
+                  <Text style={styles.arrowText}>▲</Text>
+                </TouchableOpacity>
+                <Text style={styles.timeValue} numberOfLines={1}>
+                  {String(selHour).padStart(2, "0")}
+                </Text>
+                <TouchableOpacity onPress={() => setSelHour((h) => (h + 23) % 24)} style={styles.arrow}>
+                  <Text style={styles.arrowText}>▼</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => setSelHour((h) => (h + 1) % 24)} style={styles.stepBtn}>
-                <Text style={styles.stepBtnText}>+</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.stepperRow}>
-              <Text style={styles.stepperLabel}>분</Text>
-              <TouchableOpacity onPress={() => setSelMinute((m) => (m + 45) % 60)} style={styles.stepBtn}>
-                <Text style={styles.stepBtnText}>−</Text>
-              </TouchableOpacity>
-              <View style={styles.stepValueBox}>
-                <Text style={styles.stepValue}>{String(selMinute).padStart(2, "0")}</Text>
+              <Text style={styles.timeColon}>:</Text>
+              <View style={styles.timeUnit}>
+                <TouchableOpacity onPress={() => setSelMinute((m) => (m + 15) % 60)} style={styles.arrow}>
+                  <Text style={styles.arrowText}>▲</Text>
+                </TouchableOpacity>
+                <Text style={styles.timeValue} numberOfLines={1}>
+                  {String(selMinute).padStart(2, "0")}
+                </Text>
+                <TouchableOpacity onPress={() => setSelMinute((m) => (m + 45) % 60)} style={styles.arrow}>
+                  <Text style={styles.arrowText}>▼</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => setSelMinute((m) => (m + 15) % 60)} style={styles.stepBtn}>
-                <Text style={styles.stepBtnText}>+</Text>
-              </TouchableOpacity>
             </View>
 
             {/* 요일 선택 */}
@@ -301,18 +297,12 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 18, fontWeight: "bold", color: colors.textPrimary, marginBottom: 20, textAlign: "center" },
   sectionLabel: { fontSize: 13, fontWeight: "600", color: colors.textSecondary, marginBottom: 10, marginTop: 16 },
-  timeDisplay: { alignItems: "center", marginBottom: 8 },
-  timePreview: { fontSize: 40, fontWeight: "bold", color: colors.primary },
-  stepperRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8, paddingHorizontal: 8 },
-  stepperLabel: { fontSize: 14, color: colors.textSecondary, width: 16 },
-  stepBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    alignItems: "center", justifyContent: "center",
-  },
-  stepBtnText: { fontSize: 20, color: colors.primary, fontWeight: "bold" },
-  stepValueBox: { flex: 1, alignItems: "center" },
-  stepValue: { fontSize: 24, fontWeight: "bold", color: colors.textPrimary },
+  timePicker: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  timeUnit: { alignItems: "center", gap: 4 },
+  arrow: { padding: 6 },
+  arrowText: { fontSize: 16, color: colors.primary },
+  timeValue: { fontSize: 36, fontWeight: "bold", color: colors.textPrimary, width: 72, textAlign: "center" },
+  timeColon: { fontSize: 32, fontWeight: "bold", color: colors.textPrimary, marginBottom: 8 },
   dayRow: { flexDirection: "row", gap: 8 },
   dayChip: {
     width: 38, height: 38, borderRadius: 19,
