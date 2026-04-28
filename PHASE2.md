@@ -1,7 +1,7 @@
 # PHASE2 — 개발 실행 계획
 
-> MVP(D-01~D-06) 완료 기준: 2026-04-27  
-> Phase 2 목표: "기억과 말하기를 동시에 훈련하는 스페인어 학습 OS"  
+> MVP(D-01~D-06) 완료 기준: 2026-04-27
+> Phase 2 완료 기준: 2026-04-28 (코드 기준)
 > 읽는 순서: CLAUDE.md → PRODUCT_DESIGN.md → 이 파일
 
 ---
@@ -24,302 +24,121 @@
 | P2-01 | SQLite DB 스키마 | — | ✅ 완료 |
 | P2-02 | Learning Item 시드 데이터 (A1-M1~M2, 100개) | P2-01 | ✅ 완료 |
 | P2-03 | SRS 엔진 (SM-2) | P2-01 | ✅ 완료 |
-| P2-04 | 루틴 설정 화면 (S-07) + 커리큘럼 페이스 시스템 | P2-01 | ✅ 완료 |
-| P2-05 | 학습 기록 화면 (S-08) | P2-03 | ← **다음 작업** |
-| P2-06 | 개인화 알림 (SRS 연동) | P2-03, P2-04 | ⏳ 대기 |
-| P2-07 | 음성 입력 STT | P2-03 | ⏳ 대기 |
+| P2-04 | 루틴 설정 화면 + 커리큘럼 페이스 시스템 | P2-01 | ✅ 완료 |
+| P2-05 | 학습 기록 화면 (S-08) | P2-03 | ✅ 완료 |
+| P2-06 | 개인화 알림 (SRS 연동) | P2-03, P2-04 | ✅ 완료 |
+| P2-07 | 음성 입력 STT | P2-03 | ✅ 코드 완성 / ⏳ 실기기 테스트 대기 |
 
 ---
 
-## P2-01. SQLite DB 스키마
+## P2-01. SQLite DB 스키마 ✅
 
-**목표**: 학습 데이터 영속성 — Learning Item, 진척도, 학습 로그 저장
+**완료 (2026-04-27)**
 
-**상태**: ⏳ 대기 중
-
-### 스키마 정의
-
-```sql
--- 학습 단위
-CREATE TABLE learning_items (
-    id          TEXT PRIMARY KEY,
-    level       TEXT NOT NULL,          -- A1/A2/B1/B2/C1/C2
-    type        TEXT NOT NULL,          -- word/grammar/sentence/expression/template
-    content     TEXT NOT NULL,          -- 스페인어 원문
-    meaning     TEXT NOT NULL,          -- 한국어 뜻
-    example     TEXT,                   -- 예문
-    audio_url   TEXT,
-    tags        TEXT                    -- JSON 배열: ["인사", "동사"]
-);
-
--- 사용자 진척도 (SRS 핵심)
-CREATE TABLE user_progress (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id         TEXT NOT NULL DEFAULT 'local',
-    item_id         TEXT NOT NULL,
-    stage           TEXT NOT NULL DEFAULT 'study',  -- study/retrieval/spacing/mastered
-    interval_days   INTEGER NOT NULL DEFAULT 1,
-    ease_factor     REAL NOT NULL DEFAULT 2.5,      -- SM-2 난이도 계수
-    last_reviewed_at TEXT,
-    next_review_at  TEXT,                           -- Spacing 엔진의 핵심
-    success_rate    REAL NOT NULL DEFAULT 0.0,
-    FOREIGN KEY (item_id) REFERENCES learning_items(id)
-);
-
--- 학습 로그 (분석용)
-CREATE TABLE study_log (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id     TEXT NOT NULL DEFAULT 'local',
-    item_id     TEXT NOT NULL,
-    action      TEXT NOT NULL,    -- study/retrieval/speak
-    result      TEXT NOT NULL,    -- correct/wrong
-    time_spent  INTEGER,          -- 밀리초
-    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (item_id) REFERENCES learning_items(id)
-);
-```
-
-### 구현 위치
-- `backend/database.py` — SQLite 연결 + 테이블 생성
-- `backend/models.py` — Pydantic 모델 (API 요청/응답)
-- `backend/main.py` — DB 초기화 (앱 시작 시)
-
-### 완료 기준
-- [ ] `backend/database.py` 작성, 앱 시작 시 테이블 자동 생성
-- [ ] `/health` 응답에 DB 연결 상태 포함
-- [ ] `curl http://localhost:8000/health` → `{"db": "ok"}` 확인
+6테이블: `users`, `learning_items`, `user_progress`, `study_log`, `routines`, `user_settings`, `user_push_tokens`
 
 ---
 
-## P2-02. Learning Item 시드 데이터
+## P2-02. Learning Item 시드 데이터 ✅
 
-**목표**: `content/basic_Spanish_one_step_markdown_study.md` 교재 기반 초기 학습 데이터 입력
+**완료 (2026-04-27)**
 
-**상태**: ✅ 완료 (2026-04-27)
-
-### 시드 데이터 구성 (1차: A1-M1~M2, CURRICULUM_DESIGN.md 기준)
-
-| 모듈 | 타입 | 수량 | 내용 |
-|------|------|------|------|
-| A1-M1 | 발음/문법 | 100개 | 알파벳, 발음 규칙, 강세, 명사, 관사 |
-| A1-M2 | 표현/단어 | 100개 | 인사 표현, 인칭대명사, ser 활용, 예문 |
-
-### 구현 위치
-- `backend/seed.py` — 시드 데이터 정의 + DB 삽입 함수
-- `backend/main.py` — 앱 시작 시 시드 여부 확인 후 1회 실행
-
-### 완료 기준
-- [x] `GET /items` → 100개 Learning Item 반환
-- [x] 레벨별 필터 `GET /items?level=A1` 작동
-- [x] 타입별 필터 `GET /items?type=word` 작동
-- [x] 모듈별 필터 `GET /items?module_id=A1-M1` → 50개, `A1-M2` → 50개
+- A1-M1: 50개 (발음 규칙, 관사, 명사, 숫자, 색깔)
+- A1-M2: 50개 (인사, 인칭대명사, ser 활용, 직업, 의문사)
+- `backend/seed.py` — INSERT OR IGNORE로 중복 방지
 
 ---
 
-## P2-03. SRS 엔진 (SM-2 알고리즘)
+## P2-03. SRS 엔진 (SM-2 알고리즘) ✅
 
-**목표**: 학습 이력 기반 자동 복습 스케줄링 — "성공하면 간격 늘리고, 실패하면 간격 줄인다"
-
-**상태**: ✅ 완료 (2026-04-27)
-
-### SM-2 알고리즘
+**완료 (2026-04-27)**
 
 ```python
+# backend/srs.py
 def calculate_next_review(ease_factor, interval, quality):
-    """
-    quality: 0~5 (0~2: 실패, 3~5: 성공)
-    """
     if quality < 3:
         interval = 1
         ease_factor = max(1.3, ease_factor - 0.2)
     else:
-        if interval == 1:
-            interval = 6
-        else:
-            interval = round(interval * ease_factor)
-        ease_factor = ease_factor + 0.1 - (5 - quality) * 0.08
-
-    next_review_at = datetime.now() + timedelta(days=interval)
-    return ease_factor, interval, next_review_at
+        interval = 6 if interval == 1 else round(interval * ease_factor)
+        ease_factor = max(1.3, ease_factor + 0.1 - (5 - quality) * 0.08)
+    next_review_at = (date.today() + timedelta(days=interval)).isoformat()
+    return round(ease_factor, 3), interval, next_review_at
 ```
 
-### API 엔드포인트
-
-| 경로 | 메서드 | 설명 |
-|------|--------|------|
-| `GET /review/today` | GET | 오늘 복습할 Item 목록 |
-| `POST /review/result` | POST | 복습 결과 기록 + next_review_at 재계산 |
-| `GET /progress/stats` | GET | 전체 진척도 통계 |
-
-### 완료 기준
-- [x] `POST /review/result` 호출 시 `next_review_at` 자동 업데이트
-- [x] quality=5 → interval 1→6→16 증가 확인
-- [x] quality=1 → interval=1 리셋 확인
-- [x] `GET /review/today` → due + new 합산 반환 확인
-- [x] `GET /progress/stats` → stage별 카운트 + streak 확인
+엔드포인트: `GET /review/today`, `POST /review/result`, `GET /progress/stats`
 
 ---
 
-## P2-04. 루틴 설정 화면 (S-07)
+## P2-04. 루틴 설정 + 커리큘럼 페이스 시스템 ✅
 
-**목표**: 사용자가 직접 요일/시간/학습타입을 설정 → 알림 스케줄 저장
+**완료 (2026-04-27)**
 
-**상태**: ⏳ 대기 중 (P2-01 완료 후)
+### 365일 완성 기준 기본 페이스
+| 레벨 | 일일 신규 | 총 아이템 |
+|------|-----------|-----------|
+| A1 | 5개 | 250개 |
+| A2 | 4개 | 400개 |
+| B1/B2 | 7개 | 500개 |
+| C1/C2 | 14개 | 400/250개 |
 
-### 화면 구성
-
-```
-[루틴 설정]
-┌─────────────────────────────┐
-│  + 루틴 추가                 │
-├─────────────────────────────┤
-│  🌅 06:00  매일  인사말      │ ← 슬라이드 삭제
-│  📚 13:00  평일  새 학습     │
-│  🌙 21:00  매일  일기 쓰기   │
-└─────────────────────────────┘
-
-[루틴 추가 모달]
-- 시간 선택 (TimePicker)
-- 요일 선택 (토글: 월화수목금토일)
-- 학습 타입 선택 (6종 중 선택)
-- 저장
-```
-
-### DB 스키마 추가
-
-```sql
-CREATE TABLE routines (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id         TEXT NOT NULL DEFAULT 'local',
-    learning_type   TEXT NOT NULL,   -- greeting/new_learning/diary 등
-    hour            INTEGER NOT NULL,
-    minute          INTEGER NOT NULL,
-    days_of_week    TEXT NOT NULL,   -- JSON: [1,2,3,4,5] (월~금)
-    is_active       INTEGER NOT NULL DEFAULT 1
-);
-```
-
-### 구현 위치
-- `mobile/src/screens/SettingsScreen.tsx` → `RoutineScreen.tsx` 분리
-- `backend/main.py` — `GET/POST/DELETE /routines` 추가
-
-### 완료 기준
-- [ ] 루틴 추가 → 목록에 표시
-- [ ] 루틴 삭제 → 목록에서 제거
-- [ ] 저장된 루틴이 앱 재시작 후에도 유지
-- [ ] 저장된 루틴 기반으로 백엔드 APScheduler 스케줄 자동 갱신
+엔드포인트: `GET/PATCH /settings/pace`, `GET /learning/today`  
+화면: `RoutineScreen.tsx` (CRUD), `HomeScreen.tsx` (현황 카드)
 
 ---
 
-## P2-05. 학습 기록 화면 (S-08)
+## P2-05. 학습 기록 화면 ✅
 
-**목표**: 학습 통계 + 오늘 복습 목록 + 오답 패턴 시각화
+**완료 (2026-04-28)**
 
-**상태**: ⏳ 대기 중 (P2-03 완료 후)
-
-### 화면 구성
-
-```
-[학습 기록]
-┌─────────────────────────────┐
-│  🔥 스트릭: 7일              │
-│  총 학습 아이템: 42개         │
-│  오늘 복습 대상: 8개          │
-├─────────────────────────────┤
-│  [오늘 복습하기] ←── CTA     │
-├─────────────────────────────┤
-│  단계별 현황                 │
-│  Study    ████░░  28개       │
-│  Retrieval ██░░░  10개       │
-│  Spacing  █░░░░   3개        │
-│  Mastered █░░░░   1개        │
-├─────────────────────────────┤
-│  자주 틀리는 유형             │
-│  문법 > 표현 > 단어           │
-└─────────────────────────────┘
-```
-
-### API
-
-| 경로 | 설명 |
-|------|------|
-| `GET /progress/stats` | 전체 통계 (스트릭, 단계별 수량) |
-| `GET /review/today` | 오늘 복습 대상 목록 |
-| `GET /progress/errors` | 자주 틀린 유형 분석 |
-
-### 구현 위치
-- `mobile/src/screens/RecordsScreen.tsx` — 플레이스홀더 → 실제 구현
-
-### 완료 기준
-- [ ] 스트릭 일수 표시
-- [ ] 단계별(study/retrieval/spacing/mastered) 아이템 수 표시
-- [ ] "오늘 복습하기" 버튼 → ChatScreen으로 이동 (review 타입)
-- [ ] 자주 틀리는 유형 1~3위 표시
+`mobile/src/screens/RecordsScreen.tsx`:
+- 연속 학습일(스트릭) + 총 아이템 수 + 오늘 학습 수
+- 복습 대기 CTA → ChatScreen(review)
+- 단계별 현황 바 (study / retrieval / spacing / mastered)
+- 오답 유형 랭킹 (`GET /progress/errors`)
 
 ---
 
-## P2-06. 개인화 알림 (SRS 연동)
+## P2-06. 개인화 알림 ✅
 
-**목표**: 고정 시간 알림 → SRS 기반 동적 알림 ("오늘 복습할 것이 8개 있어요!")
+**완료 (2026-04-28)**
 
-**상태**: ⏳ 대기 중 (P2-03, P2-04 완료 후)
+| 항목 | MVP | P2-06 |
+|------|-----|-------|
+| 토큰 저장 | 파일(/tmp) 익명 | user_push_tokens DB, JWT 연결 |
+| 알림 문구 | 고정 | 복습 수 동적 포함 |
+| 딥링크 | 루틴 타입 | 복습 있으면 review 우선 |
 
-### 변경 내용 (MVP 대비)
-
-| | MVP (D-06) | Phase 2 (P2-06) |
-|---|---|---|
-| 알림 시간 | 하드코딩 (6시/9시/21시) | 사용자 루틴 설정 기반 |
-| 알림 내용 | 고정 문구 | 오늘 복습 수 포함 동적 문구 |
-| 딥링크 | ChatScreen (학습 타입) | ChatScreen (review 타입 우선) |
-
-### 알림 문구 예시
-```
-🌅 좋은 아침이에요! 오늘 복습할 표현이 5개 있어요.
-📚 [시작하기]
-```
-
-### 완료 기준
-- [ ] 루틴 설정 변경 시 APScheduler 스케줄 자동 갱신
-- [ ] 알림 문구에 오늘 복습 수 동적 포함
-- [ ] 알림 탭 → 복습 타입 ChatScreen 진입
+`fire_push_for_type(learning_type)`: 모든 등록 유저의 due 복습 수 조회 → 유저별 동적 메시지 발송
 
 ---
 
-## P2-07. 음성 입력 STT
+## P2-07. 음성 입력 STT ✅ (코드 완성)
 
-**목표**: 타이핑 없이 말하기로 답변 입력 → Speaking Engine 첫 단계
+**완료 (2026-04-28) — 실기기 테스트 대기**
 
-**상태**: ⏳ 대기 중 (P2-03 완료 후)
+- 패키지: `expo-speech-recognition` 3.1.3
+- 위치: `ChatScreen.tsx` 입력창
+- 기능: 🇪🇸/🇰🇷 언어 토글 + 🎤 마이크 버튼
+- **Dev Build 필요** (Expo Go 미지원)
 
-### 구현 범위
+### 완료 기준 현황
+- [x] 마이크 버튼 탭 → 녹음 시작/중지
+- [x] 결과 → 입력창 자동 채움 (실시간 interim results)
+- [x] 한국어/스페인어 전환
+- [ ] 스페인어 인식 정확도 확인 — Dev Build 테스트 필요
+- [ ] 실기기 동작 확인 — Dev Build 테스트 필요
 
-- `expo-speech-recognition` 또는 `@react-native-voice/voice` 패키지
-- ChatScreen 입력창 옆 마이크 버튼 추가
-- 녹음 중 → 텍스트 변환 → 입력창 자동 채움
-- 한국어/스페인어 언어 전환 지원
+### Dev Build 진행 방법
+```bash
+export PATH="/home/scshin/.local/opt/node/node-v22.22.2-linux-x64/bin:$PATH"
+cd ~/projects/picopico/mobile
 
-### 완료 기준
-- [ ] 마이크 버튼 탭 → 녹음 시작
-- [ ] 말하기 완료 → 입력창에 텍스트 자동 입력
-- [ ] 스페인어 발화 인식 정확도 기본 수준 확인
-- [ ] 실 기기(iPhone)에서 동작 확인
+# iOS (Apple Developer 계정 활성화 후)
+eas build --platform ios --profile development
 
----
-
-## 개발 순서 (의존성 기준)
-
-```
-P2-01 DB 스키마
-    ↓
-P2-02 시드 데이터    P2-03 SRS 엔진
-    ↓                    ↓
-    └──────┬─────────────┘
-           ↓
-    P2-04 루틴 설정    P2-05 학습 기록
-           ↓
-    P2-06 개인화 알림
-           ↓
-    P2-07 STT (독립 진행 가능)
+# Android (무료, 즉시 가능)
+eas build --platform android --profile development
 ```
 
 ---
@@ -329,7 +148,13 @@ P2-02 시드 데이터    P2-03 SRS 엔진
 - [x] **P2-01**: SQLite DB 스키마 ✅
 - [x] **P2-02**: Learning Item 시드 데이터 ✅
 - [x] **P2-03**: SRS 엔진 ✅
-- [x] **P2-04**: 루틴 설정 화면 + 커리큘럼 페이스 시스템 ✅
-- [ ] **P2-05**: 학습 기록 화면 ← **다음 작업**
-- [ ] **P2-06**: 개인화 알림
-- [ ] **P2-07**: 음성 입력 STT
+- [x] **P2-04**: 루틴 설정 + 커리큘럼 페이스 ✅
+- [x] **P2-05**: 학습 기록 화면 ✅
+- [x] **P2-06**: 개인화 알림 ✅
+- [x] **P2-07**: STT 코드 완성 ✅ / 실기기 테스트 ⏳
+
+## 다음 과제
+
+- Dev Build로 STT 실기기 테스트
+- 시드 데이터 확충 (A1-M3 이후)
+- 실사용 피드백 기반 UX 개선

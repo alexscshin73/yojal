@@ -5,45 +5,39 @@
 
 ---
 
-## 현재 상태 (2026-04-27)
+## 현재 상태 (2026-04-28)
 
-**현재 게이트**: Phase 2 진행 중  
-**완료된 마일스톤**: D-01~D-06 (MVP) + P2-01 + P2-02 + P2-03 + P2-04  
-**다음 할 일**: P2-05 학습 기록 화면 → PHASE2.md 참고
-
----
-
-## 게이트 현황
-
-- [x] **기획 게이트**: PLANNING.md 완성 + 승인 ✅
-- [x] **설계 게이트**: DESIGN.md 화면별 상세 UI + 승인 ✅
-- [x] **개발 게이트**: FEATURES.md 기능별 완료 기준 + 승인 ✅
+**현재 단계**: Phase 2 전체 코드 완성  
+**완료**: D-01~D-06 (MVP) + P2-01~P2-07 (Phase 2 전체)  
+**남은 것**: STT Dev Build 테스트 + 콘텐츠 확충 (A1-M3 이후 시드 데이터)
 
 ---
 
-## 완료된 작업
+## 완료된 작업 전체 목록
 
 | 태스크 | 내용 | 날짜 |
 |--------|------|------|
-| D-01 | Ollama 설치 + llama3.3:latest (42GB) 로드, RTX 5090 x2 GPU 100% 활용 | 2026-04-23 |
-| D-02 | FastAPI 백엔드 — /health, /chat, /chat/start, 6가지 학습 타입 프롬프트 | 2026-04-23 |
-| D-03 | Expo 앱 — 하단 탭 3개, Teal 브랜드, 실 기기 확인 | 2026-04-23 |
-| D-04 | ChatScreen — AI 교정 카드, 힌트 패널, 폰트 크기 토글, 실 기기 확인 | 2026-04-23 |
-| D-04+ | SSE 스트리밍 — 백엔드 /chat/stream, /chat/start/stream 추가, 앱 token-by-token 출력 | 2026-04-24 |
-| UI | 20단계 스페인어 커리큘럼 구조화 (curriculum.py), 한국어 전용 강제 규칙 | 2026-04-24 |
-| UI | AI 교정 블록 파싱 (⚠️ 내 답 / 정답 / 설명) → 별도 카드 렌더링 | 2026-04-24 |
-| UI | 브랜드명 "조잘재잘" → **"PicoPico"** 변경 | 2026-04-24 |
-| Fix | SSE 스트리밍: response.body.getReader() → XMLHttpRequest.onprogress 교체 (React Native 호환) | 2026-04-27 |
-| D-05 | Cloudflare Tunnel — picopico.carroamix.com → localhost:8000, 모바일 데이터 실기기 확인 | 2026-04-27 |
-| D-06 | 푸시 알림 — APScheduler(6시/9시/21시) + Expo Push + 딥링크(알림 탭→ChatScreen) 실기기 확인 | 2026-04-27 |
-| P2-01 | SQLite DB 스키마 — 5테이블 + 멀티유저 JWT 인증 (register/login/me) | 2026-04-27 |
-| P2-02 | Learning Item 시드 데이터 — A1-M1(50) + A1-M2(50) = 100개, GET /items 확인 | 2026-04-27 |
-| P2-03 | SRS 엔진 — SM-2 알고리즘 (backend/srs.py), /review/today + /review/result + /progress/stats | 2026-04-27 |
-| P2-04a | 커리큘럼 페이스 시스템 — 365일 완성 기준, 레벨별 DEFAULT_PACE, /learning/today, /settings/pace | 2026-04-27 |
-| P2-04b | HomeScreen 재설계 — 오늘 학습 현황 카드, 모듈 진행 바, 신규/복습 버튼, 빠른 학습 그리드 | 2026-04-27 |
-| P2-04c | RoutineScreen 신설 — 루틴 CRUD (▲▼ 시간 선택 + 요일 토글 + 4가지 학습 타입) | 2026-04-27 |
-| P2-04d | SettingsScreen 재설계 — 프로필 카드 + 루틴 설정 진입 + 로그아웃 | 2026-04-27 |
-| Fix | expo-notifications API 변경 대응 — shouldShowBanner, shouldShowList 추가 | 2026-04-27 |
+| D-01 | Ollama + llama3.3:latest (42GB), RTX 5090 x2 GPU 활용 | 2026-04-23 |
+| D-02 | FastAPI 백엔드 — /health, /chat, 6가지 학습 타입 프롬프트 | 2026-04-23 |
+| D-03 | Expo 앱 — 하단 탭 3개, Teal 브랜드, 실기기 확인 | 2026-04-23 |
+| D-04 | ChatScreen — AI 교정 카드, 힌트 패널, 폰트 크기 토글 | 2026-04-23 |
+| D-04+ | SSE 스트리밍 — XHR 기반 (React Native body.getReader 미지원) | 2026-04-24 |
+| UI | 커리큘럼 구조화 (curriculum.py), 한국어 전용 강제, 브랜드명 PicoPico | 2026-04-24 |
+| D-05 | Cloudflare Tunnel — picopico.carroamix.com → localhost:8000 | 2026-04-27 |
+| D-06 | 푸시 알림 — APScheduler + Expo Push + 딥링크, 실기기 확인 | 2026-04-27 |
+| P2-01 | SQLite DB 스키마 — 6테이블 + 멀티유저 JWT 인증 | 2026-04-27 |
+| P2-02 | Learning Item 시드 — A1-M1(50) + A1-M2(50) = 100개 | 2026-04-27 |
+| P2-03 | SRS 엔진 — SM-2 알고리즘 (srs.py), /review/today, /review/result, /progress/stats | 2026-04-27 |
+| P2-04 | 커리큘럼 페이스 시스템 (365일 기준) + /learning/today + /settings/pace | 2026-04-27 |
+| P2-04 | HomeScreen 재설계 — 모듈 진행 바, 신규/복습 버튼, 빠른 학습 그리드 | 2026-04-27 |
+| P2-04 | RoutineScreen — 루틴 CRUD (▲▼ 시간 선택 + 요일 토글 + 4가지 학습 타입) | 2026-04-27 |
+| P2-04 | SettingsScreen 재설계 — 프로필 카드 + 루틴 진입 + 로그아웃 | 2026-04-27 |
+| P2-05 | RecordsScreen — 스트릭, 단계별 현황 바, 복습 CTA, 오답 유형 랭킹 | 2026-04-28 |
+| P2-05 | 백엔드 /progress/errors — 자주 틀린 유형 상위 3개 | 2026-04-28 |
+| P2-06 | 개인화 알림 — 복습 수 동적 문구 + 유저별 push 토큰 DB 저장 | 2026-04-28 |
+| P2-06 | /register-token JWT 인증 필수화, App.tsx 로그인 후 등록 | 2026-04-28 |
+| P2-07 | STT — expo-speech-recognition, ChatScreen 마이크 버튼, 언어 토글 | 2026-04-28 |
+| Build | eas.json, expo-dev-client 설치, bundleIdentifier 설정 | 2026-04-28 |
 
 ---
 
@@ -52,30 +46,46 @@
 - [x] **P2-01**: SQLite DB 스키마 ✅
 - [x] **P2-02**: Learning Item 시드 데이터 ✅
 - [x] **P2-03**: SRS 엔진 (SM-2) ✅
-- [x] **P2-04**: 루틴 설정 화면 + 커리큘럼 페이스 시스템 ✅
-- [ ] **P2-05**: 학습 기록 화면 ← **다음 작업**
-- [ ] **P2-06**: 개인화 알림 (SRS 연동)
-- [ ] **P2-07**: 음성 입력 STT
+- [x] **P2-04**: 루틴 설정 + 커리큘럼 페이스 시스템 ✅
+- [x] **P2-05**: 학습 기록 화면 ✅
+- [x] **P2-06**: 개인화 알림 ✅
+- [x] **P2-07**: 음성 입력 STT (코드 완성 ✅ / 실기기 테스트 ⏳ Dev Build 필요)
+
+---
+
+## 남은 작업
+
+### 즉시 가능
+- [ ] Expo Go로 P2-01~P2-06 실기기 통합 테스트
+- [ ] Android Dev Build → STT 테스트
+
+### Apple Developer 계정 활성화 후
+- [ ] iOS Dev Build (`eas build --platform ios --profile development`)
+- [ ] STT iOS 실기기 테스트 (es-ES / ko-KR 인식 확인)
+
+### 콘텐츠
+- [ ] A1-M3 ~ A1-M5 시드 데이터 추가 (현재 A1-M1, M2 100개만 있음)
+- [ ] A2 이후 모듈 시드 데이터
 
 ---
 
 ## 세션 기록
 
-| 날짜 | 작업 내용 | 결과 |
-|------|-----------|------|
-| 2026-04-23 | 프로젝트 초기 설정, 방법론 정의, PLANNING.md 작성 | 완료 |
-| 2026-04-23 | D-01~D-04 연속 완료 — Ollama, FastAPI, Expo, ChatScreen | 완료 |
-| 2026-04-24 | SSE 스트리밍 구현, 브랜드 PicoPico로 변경, UI 디테일 수정 | 완료 |
-| 2026-04-27 | SSE XHR 수정, D-05 Cloudflare Tunnel, D-06 푸시 알림, **MVP 완성** | 완료 |
-| 2026-04-27 | P2-01~P2-03: DB 스키마, 시드 데이터, SRS 엔진, 실기기 통합 테스트 통과 | 완료 |
-| 2026-04-27 | P2-04: 커리큘럼 페이스 시스템, HomeScreen 재설계, RoutineScreen, SettingsScreen | 완료 |
+| 날짜 | 작업 내용 |
+|------|-----------|
+| 2026-04-23 | D-01~D-04: 초기 설정, Ollama, FastAPI, Expo, ChatScreen |
+| 2026-04-24 | SSE 스트리밍, PicoPico 브랜드, AI 교정 블록 파싱 |
+| 2026-04-27 | D-05~D-06: Cloudflare Tunnel, 푸시 알림, MVP 완성 |
+| 2026-04-27 | P2-01~P2-04: DB 스키마, 시드, SRS, 커리큘럼 페이스, 루틴, 홈 화면 |
+| 2026-04-28 | P2-05~P2-07: 학습 기록, 개인화 알림, STT 코드 완성, EAS 빌드 설정 |
 
 ---
 
 ## 알려진 문제 / 주의사항
 
-- **Ollama는 scshin 유저로 직접 실행해야 GPU 감지됨** (systemd 서비스 아님)
-- **백엔드 수동 실행**: `nohup python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 > /tmp/picopico_backend.log 2>&1 &`
-- **Expo 개발 서버**: `npx expo start --port 8085` (8081 = VSCode Remote 선점)
-- **Cloudflare Tunnel**: `nohup cloudflared tunnel run --token eyJh...` → `/tmp/picopico_tunnel.log`
-- **SQLite 복습 쿼리**: `date('now')` 사용 필수 — `datetime('now')`는 UTC라 당일 복습 아이템 누락 가능
+- **eas 명령어 PATH 없음**: `export PATH="/home/scshin/.local/opt/node/node-v22.22.2-linux-x64/bin:$PATH"`
+- **Apple Developer 계정**: alexscshin@gmail.com 가입 완료, 팀 활성화 대기 중
+- **STT Expo Go 미지원**: expo-speech-recognition은 Dev Build에서만 동작
+- **Ollama GPU**: scshin 유저로 직접 실행해야 감지 (`nohup ollama serve ...`)
+- **SQLite 복습 쿼리**: `date('now')` 사용 필수 (`datetime('now')`는 UTC → 당일 누락 가능)
+- **Expo 포트**: 8081 금지(VSCode Remote 선점), `--port 8085` 사용
