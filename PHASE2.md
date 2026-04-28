@@ -23,7 +23,7 @@
 |----|--------|------|------|
 | P2-01 | SQLite DB 스키마 | — | ✅ 완료 |
 | P2-02 | Learning Item 시드 데이터 (A1-M1~M2, 100개) | P2-01 | ✅ 완료 |
-| P2-03 | SRS 엔진 (SM-2) | P2-01 | ⏳ 대기 |
+| P2-03 | SRS 엔진 (SM-2) | P2-01 | ✅ 완료 |
 | P2-04 | 루틴 설정 화면 (S-07) | P2-01 | ⏳ 대기 |
 | P2-05 | 학습 기록 화면 (S-08) | P2-03 | ⏳ 대기 |
 | P2-06 | 개인화 알림 (SRS 연동) | P2-03, P2-04 | ⏳ 대기 |
@@ -120,7 +120,7 @@ CREATE TABLE study_log (
 
 **목표**: 학습 이력 기반 자동 복습 스케줄링 — "성공하면 간격 늘리고, 실패하면 간격 줄인다"
 
-**상태**: ⏳ 대기 중 (P2-01 완료 후)
+**상태**: ✅ 완료 (2026-04-27)
 
 ### SM-2 알고리즘
 
@@ -152,10 +152,11 @@ def calculate_next_review(ease_factor, interval, quality):
 | `GET /progress/stats` | GET | 전체 진척도 통계 |
 
 ### 완료 기준
-- [ ] `POST /review/result` 호출 시 `next_review_at` 자동 업데이트
-- [ ] quality=5 → interval 증가 확인
-- [ ] quality=1 → interval=1 리셋 확인
-- [ ] `GET /review/today` → 오늘 복습 대상만 반환 확인
+- [x] `POST /review/result` 호출 시 `next_review_at` 자동 업데이트
+- [x] quality=5 → interval 1→6→16 증가 확인
+- [x] quality=1 → interval=1 리셋 확인
+- [x] `GET /review/today` → due + new 합산 반환 확인
+- [x] `GET /progress/stats` → stage별 카운트 + streak 확인
 
 ---
 
@@ -327,8 +328,8 @@ P2-02 시드 데이터    P2-03 SRS 엔진
 
 - [x] **P2-01**: SQLite DB 스키마 ✅
 - [x] **P2-02**: Learning Item 시드 데이터 ✅
-- [ ] **P2-03**: SRS 엔진 ← **다음 작업**
-- [ ] **P2-04**: 루틴 설정 화면
+- [x] **P2-03**: SRS 엔진 ✅
+- [ ] **P2-04**: 루틴 설정 화면 ← **다음 작업**
 - [ ] **P2-05**: 학습 기록 화면
 - [ ] **P2-06**: 개인화 알림
 - [ ] **P2-07**: 음성 입력 STT

@@ -12,9 +12,14 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from prompts import SYSTEM_PROMPTS, LEARNING_TYPE_LABELS
 from curriculum import get_level_prompt, CURRICULUM
 from database import init_db, check_db, get_db
-from models import LearningItem, LearningItemCreate, RegisterRequest, LoginRequest, AuthResponse, UserPublic
+from models import (
+    LearningItem, LearningItemCreate,
+    RegisterRequest, LoginRequest, AuthResponse, UserPublic,
+    ReviewResultRequest, ReviewItem, ReviewResultResponse, ProgressStats, StageCount,
+)
 from auth import hash_password, verify_password, create_token, new_user_id, get_current_user
 from seed import seed_learning_items
+from srs import calculate_next_review, interval_to_stage
 
 load_dotenv()
 
@@ -383,3 +388,188 @@ async def chat_start(req: StartRequest):
         raise HTTPException(status_code=502, detail=f"Ollama 연결 실패: {str(e)}")
     return ChatResponse(reply=reply, learning_type=req.learning_type,
                         learning_type_label=LEARNING_TYPE_LABELS[req.learning_type])
+
+
+# ── SRS 엔진 ─────────────────────────────────────────────────────────
+
+@app.get("/review/today", response_model=dict)
+async def review_today(
+    limit: int = Query(20, ge=1, le=50),
+    user_id: str = Depends(get_current_user),
+):
+    """오늘 복습 대상 + 신규 아이템을 합산해 반환."""
+    from datetime import date
+    today = date.today().isoformat()
+
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+
+        async with db.execute(
+            """
+            SELECT li.*, up.stage, up.interval_days, up.ease_factor,
+                   up.last_reviewed_at, up.next_review_at, up.success_rate,
+                   0 AS is_new
+            FROM learning_items li
+            JOIN user_progress up ON li.id = up.item_id
+            WHERE up.user_id = ? AND up.next_review_at <= ?
+            ORDER BY up.next_review_at ASC
+            LIMIT ?
+            """,
+            (user_id, today, limit),
+        ) as cur:
+            due = await cur.fetchall()
+
+        remaining = limit - len(due)
+        new_items = []
+        if remaining > 0:
+            async with db.execute(
+                """
+                SELECT li.*,
+                       'study' AS stage, 1 AS interval_days, 2.5 AS ease_factor,
+                       NULL AS last_reviewed_at, NULL AS next_review_at, 0.0 AS success_rate,
+                       1 AS is_new
+                FROM learning_items li
+                WHERE li.id NOT IN (
+                    SELECT item_id FROM user_progress WHERE user_id = ?
+                )
+                ORDER BY li.level, li.module_id, li.id
+                LIMIT ?
+                """,
+                (user_id, remaining),
+            ) as cur:
+                new_items = await cur.fetchall()
+
+    items = [ReviewItem(**row) for row in due + new_items]
+    return {
+        "items": [i.model_dump() for i in items],
+        "total": len(items),
+        "due_count": len(due),
+        "new_count": len(new_items),
+    }
+
+
+@app.post("/review/result", response_model=ReviewResultResponse)
+async def review_result(
+    req: ReviewResultRequest,
+    user_id: str = Depends(get_current_user),
+):
+    """복습 결과를 기록하고 SM-2로 다음 복습일을 계산한다."""
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+
+        async with db.execute(
+            "SELECT * FROM user_progress WHERE user_id = ? AND item_id = ?",
+            (user_id, req.item_id),
+        ) as cur:
+            prog = await cur.fetchone()
+
+        ease_factor = prog["ease_factor"] if prog else 2.5
+        interval = prog["interval_days"] if prog else 1
+        prev_success = prog["success_rate"] if prog else 0.0
+
+        new_ef, new_interval, next_review_at = calculate_next_review(ease_factor, interval, req.quality)
+        new_stage = interval_to_stage(new_interval)
+
+        success = 1.0 if req.quality >= 3 else 0.0
+        total_reviews = 1
+        if prog:
+            async with db.execute(
+                "SELECT COUNT(*) AS cnt FROM study_log WHERE user_id = ? AND item_id = ?",
+                (user_id, req.item_id),
+            ) as cur:
+                row = await cur.fetchone()
+                total_reviews = (row["cnt"] or 0) + 1
+        new_success_rate = prev_success + (success - prev_success) / total_reviews
+
+        from datetime import datetime
+        now = datetime.utcnow().isoformat()
+
+        await db.execute(
+            """
+            INSERT INTO user_progress
+                (user_id, item_id, stage, interval_days, ease_factor,
+                 last_reviewed_at, next_review_at, success_rate)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, item_id) DO UPDATE SET
+                stage = excluded.stage,
+                interval_days = excluded.interval_days,
+                ease_factor = excluded.ease_factor,
+                last_reviewed_at = excluded.last_reviewed_at,
+                next_review_at = excluded.next_review_at,
+                success_rate = excluded.success_rate
+            """,
+            (user_id, req.item_id, new_stage, new_interval, new_ef,
+             now, next_review_at, round(new_success_rate, 3)),
+        )
+        await db.execute(
+            "INSERT INTO study_log (user_id, item_id, action, result, time_spent) VALUES (?, ?, ?, ?, ?)",
+            (user_id, req.item_id, "retrieval",
+             "correct" if req.quality >= 3 else "wrong", req.time_spent),
+        )
+        await db.commit()
+
+    return ReviewResultResponse(
+        item_id=req.item_id,
+        stage=new_stage,
+        interval_days=new_interval,
+        ease_factor=new_ef,
+        next_review_at=next_review_at,
+    )
+
+
+@app.get("/progress/stats", response_model=ProgressStats)
+async def progress_stats(user_id: str = Depends(get_current_user)):
+    """단계별 아이템 수, 오늘 복습 수, 연속 학습 일수."""
+    from datetime import timedelta
+    from datetime import timezone
+    from datetime import datetime as dt
+
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+
+        async with db.execute(
+            "SELECT stage, COUNT(*) AS cnt FROM user_progress WHERE user_id = ? GROUP BY stage",
+            (user_id,),
+        ) as cur:
+            rows = await cur.fetchall()
+        stage_map = {r["stage"]: r["cnt"] for r in rows}
+
+        # SQLite는 UTC 저장 → date('now')로 UTC 기준 비교
+        async with db.execute(
+            "SELECT COUNT(*) AS cnt FROM study_log WHERE user_id = ? AND date(created_at) = date('now')",
+            (user_id,),
+        ) as cur:
+            row = await cur.fetchone()
+        today_reviewed = row["cnt"] if row else 0
+
+        async with db.execute(
+            """
+            SELECT DISTINCT date(created_at) AS study_date
+            FROM study_log WHERE user_id = ?
+            ORDER BY study_date DESC LIMIT 365
+            """,
+            (user_id,),
+        ) as cur:
+            date_rows = await cur.fetchall()
+        dates = [r["study_date"] for r in date_rows]
+
+        # UTC 오늘 날짜 기준으로 연속 일수 계산
+        utc_today = dt.now(timezone.utc).date()
+        streak = 0
+        for i, d in enumerate(dates):
+            if d == (utc_today - timedelta(days=i)).isoformat():
+                streak += 1
+            else:
+                break
+
+    return ProgressStats(
+        total_studied=sum(stage_map.values()),
+        by_stage=StageCount(
+            study=stage_map.get("study", 0),
+            retrieval=stage_map.get("retrieval", 0),
+            spacing=stage_map.get("spacing", 0),
+            mastered=stage_map.get("mastered", 0),
+        ),
+        today_reviewed=today_reviewed,
+        streak_days=streak,
+    )

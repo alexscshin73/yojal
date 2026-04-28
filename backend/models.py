@@ -105,3 +105,59 @@ class Routine(RoutineCreate):
         if isinstance(v, str):
             return json.loads(v)
         return v
+
+
+# ── SRS ──────────────────────────────────────────────────────────────
+
+class ReviewResultRequest(BaseModel):
+    item_id: str
+    quality: int        # 0~5 (0~2: 실패, 3~5: 성공)
+    time_spent: Optional[int] = None  # 밀리초
+
+
+class ReviewItem(BaseModel):
+    """학습 아이템 + SRS 진척도 합산"""
+    id: str
+    level: str
+    module_id: str
+    type: str
+    content: str
+    meaning: str
+    example_1: Optional[str] = None
+    example_2: Optional[str] = None
+    tags: List[str] = []
+    is_new: bool = True
+    stage: str = "study"
+    interval_days: int = 1
+    ease_factor: float = 2.5
+    next_review_at: Optional[str] = None
+    success_rate: float = 0.0
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def parse_tags(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+
+class ReviewResultResponse(BaseModel):
+    item_id: str
+    stage: str
+    interval_days: int
+    ease_factor: float
+    next_review_at: str
+
+
+class StageCount(BaseModel):
+    study: int = 0
+    retrieval: int = 0
+    spacing: int = 0
+    mastered: int = 0
+
+
+class ProgressStats(BaseModel):
+    total_studied: int
+    by_stage: StageCount
+    today_reviewed: int
+    streak_days: int
