@@ -31,6 +31,16 @@
         "projectId": "ceaa895e-f7c5-4635-a930-f56de47b2d93"
       }
     },
-    "owner": "alexscshin73"
+    "owner": "alexscshin73",
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "스페인어 발음을 인식하기 위해 마이크 권한이 필요합니다.",
+          "speechRecognitionPermission": "스페인어 음성을 텍스트로 변환하기 위해 음성 인식 권한이 필요합니다."
+        }
+      ]
+    ]
   }
 }

@@ -10,12 +10,17 @@ import {
   ActivityIndicator,
   Modal,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useRef, useState } from "react";
 import { colors } from "../theme";
 import { ChatMessage, LearningType, LEARNING_TYPE_COLORS, LEARNING_TYPE_LABELS } from "../types";
 import { streamStart, streamChat } from "../services/api";
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
 
 // ─── 폰트 크기 단계 ───────────────────────────────────────────────
 const FONT_SIZES = [13, 15, 17] as const;
@@ -213,6 +218,46 @@ export default function ChatScreen({ route, navigation }: any) {
   const fontSize = FONT_SIZES[fontSizeIdx];
   const listRef = useRef<FlatList>(null);
 
+  // ── STT 상태 ────────────────────────────────────────────────────
+  const [isListening, setIsListening] = useState(false);
+  const [speechLang, setSpeechLang] = useState<"es-ES" | "ko-KR">("es-ES");
+
+  useSpeechRecognitionEvent("start", () => setIsListening(true));
+  useSpeechRecognitionEvent("end", () => setIsListening(false));
+  useSpeechRecognitionEvent("result", (event) => {
+    const transcript = event.results[0]?.transcript ?? "";
+    if (transcript) setInput(transcript);
+  });
+  useSpeechRecognitionEvent("error", (event) => {
+    setIsListening(false);
+    if (event.error !== "aborted") {
+      Alert.alert("음성 인식 오류", event.message ?? event.error);
+    }
+  });
+
+  async function toggleListening() {
+    if (isListening) {
+      ExpoSpeechRecognitionModule.stop();
+      return;
+    }
+    try {
+      const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (!granted) {
+        Alert.alert("마이크 권한 필요", "설정 → PicoPico → 마이크를 허용해주세요.");
+        return;
+      }
+      setInput("");
+      ExpoSpeechRecognitionModule.start({ lang: speechLang, interimResults: true, continuous: false });
+    } catch {
+      Alert.alert("음성 인식 불가", "이 기능은 개발 빌드(Dev Build)에서만 동작합니다.");
+    }
+  }
+
+  function toggleLang() {
+    if (isListening) ExpoSpeechRecognitionModule.stop();
+    setSpeechLang((l) => (l === "es-ES" ? "ko-KR" : "es-ES"));
+  }
+
   useEffect(() => { loadInitialMessage(); }, []);
 
   async function loadInitialMessage() {
@@ -301,14 +346,23 @@ export default function ChatScreen({ route, navigation }: any) {
       {/* 입력창 */}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View style={mainStyles.inputBar}>
+          <TouchableOpacity onPress={toggleLang} style={mainStyles.langBtn}>
+            <Text style={mainStyles.langText}>{speechLang === "es-ES" ? "🇪🇸" : "🇰🇷"}</Text>
+          </TouchableOpacity>
           <TextInput
             style={[mainStyles.input, { fontSize }]}
             value={input}
             onChangeText={setInput}
-            placeholder="스페인어로 답장해보세요..."
-            placeholderTextColor={colors.textSecondary}
+            placeholder={isListening ? "듣고 있어요..." : "스페인어로 답장해보세요..."}
+            placeholderTextColor={isListening ? colors.primary : colors.textSecondary}
             multiline
           />
+          <TouchableOpacity
+            onPress={toggleListening}
+            style={[mainStyles.micBtn, isListening && mainStyles.micBtnActive]}
+          >
+            <Text style={mainStyles.micText}>{isListening ? "⏹" : "🎤"}</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[mainStyles.sendButton, { backgroundColor: typeColor }]}
             onPress={handleSend}
@@ -384,6 +438,19 @@ const mainStyles = StyleSheet.create({
     color: colors.textPrimary,
     maxHeight: 100,
   },
+  langBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    borderWidth: 1, borderColor: colors.border,
+    justifyContent: "center", alignItems: "center",
+  },
+  langText: { fontSize: 18 },
+  micBtn: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
+    justifyContent: "center", alignItems: "center",
+  },
+  micBtnActive: { backgroundColor: "#FFEBEE", borderColor: "#E53935" },
+  micText: { fontSize: 20 },
   sendButton: {
     width: 42,
     height: 42,
