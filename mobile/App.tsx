@@ -12,6 +12,7 @@ import HomeScreen from "./src/screens/HomeScreen";
 import RecordsScreen from "./src/screens/RecordsScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import ChatScreen from "./src/screens/ChatScreen";
+import RoutineScreen from "./src/screens/RoutineScreen";
 import LoginScreen from "./src/screens/auth/LoginScreen";
 import RegisterScreen from "./src/screens/auth/RegisterScreen";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
@@ -108,6 +109,7 @@ function RootNavigator() {
         <>
           <Stack.Screen name="Main" component={TabNavigator} />
           <Stack.Screen name="Chat" component={ChatScreen} />
+          <Stack.Screen name="Routine" component={RoutineScreen} />
         </>
       ) : (
         // 미인증 → 로그인/회원가입

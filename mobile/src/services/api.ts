@@ -99,6 +99,45 @@ export async function getItems(
   return res.json();
 }
 
+// ── 루틴 CRUD ────────────────────────────────────────────────────
+
+export interface Routine {
+  id: number;
+  user_id: string;
+  learning_type: string;
+  hour: number;
+  minute: number;
+  days_of_week: number[];
+  is_active: boolean;
+}
+
+export async function getRoutines(token: string): Promise<Routine[]> {
+  const res = await fetch(`${API_BASE_URL}/routines`, { headers: authHeaders(token) });
+  if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
+  return res.json();
+}
+
+export async function createRoutine(
+  token: string,
+  data: { learning_type: string; hour: number; minute: number; days_of_week: number[] }
+): Promise<Routine> {
+  const res = await fetch(`${API_BASE_URL}/routines`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ ...data, is_active: true }),
+  });
+  if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteRoutine(token: string, id: number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/routines/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok && res.status !== 204) throw new Error(`서버 오류: ${res.status}`);
+}
+
 // ── 비스트리밍 fallback (필요시) ─────────────────────────────────
 
 export async function startChat(

@@ -16,6 +16,7 @@ from models import (
     LearningItem, LearningItemCreate,
     RegisterRequest, LoginRequest, AuthResponse, UserPublic,
     ReviewResultRequest, ReviewItem, ReviewResultResponse, ProgressStats, StageCount,
+    RoutineCreate, Routine,
 )
 from auth import hash_password, verify_password, create_token, new_user_id, get_current_user
 from seed import seed_learning_items
@@ -78,6 +79,17 @@ def save_token(token: str):
         TOKENS_FILE.write_text(json.dumps(tokens))
 
 
+# ── 학습 타입별 푸시 문구 ────────────────────────────────────────────
+PUSH_CONTENT = {
+    "greeting":      ("🌅 좋은 아침!", "스페인어로 인사해볼까요? ¡Buenos días!"),
+    "situational":   ("🗣 상황 단어 학습", "오늘의 상황 단어 학습을 시작해요!"),
+    "new_learning":  ("📚 새 학습 시간", "오늘의 스페인어 수업을 시작해요!"),
+    "review":        ("🔄 복습 시간", "배운 내용을 복습해볼까요?"),
+    "mistake_review":("❌ 오답 복습", "틀렸던 문제를 다시 풀어봐요"),
+    "diary":         ("📔 일기 쓰기", "오늘 하루를 스페인어로 기록해봐요"),
+}
+
+
 # ── Expo Push 발송 ───────────────────────────────────────────────────
 async def send_push(title: str, body: str, learning_type: str):
     tokens = load_tokens()
@@ -98,6 +110,53 @@ async def send_push(title: str, body: str, learning_type: str):
 
 app = FastAPI(title="PicoPico API", version="0.1.0")
 scheduler = AsyncIOScheduler(timezone="America/Mexico_City")
+
+
+async def refresh_scheduler():
+    """DB의 active 루틴 전체로 APScheduler 잡을 재구성한다."""
+    for job in scheduler.get_jobs():
+        if job.id.startswith("routine_"):
+            scheduler.remove_job(job.id)
+
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+        async with db.execute(
+            "SELECT DISTINCT hour, minute, learning_type FROM routines WHERE is_active = 1"
+        ) as cur:
+            rows = await cur.fetchall()
+
+    if not rows:
+        # 루틴이 없으면 기본 3개 복원
+        _add_default_jobs()
+        return
+
+    # 기본 잡 제거
+    for job in scheduler.get_jobs():
+        if not job.id.startswith("routine_"):
+            try:
+                scheduler.remove_job(job.id)
+            except Exception:
+                pass
+
+    for row in rows:
+        lt = row["learning_type"]
+        title, body = PUSH_CONTENT.get(lt, ("🦜 PicoPico", "학습 시간이에요!"))
+        job_id = f"routine_{row['hour']}_{row['minute']}_{lt}"
+        scheduler.add_job(
+            send_push, "cron",
+            hour=row["hour"], minute=row["minute"],
+            id=job_id, replace_existing=True,
+            args=[title, body, lt],
+        )
+
+
+def _add_default_jobs():
+    scheduler.add_job(send_push, "cron", hour=6, minute=0, id="default_greeting", replace_existing=True,
+                      args=["🌅 좋은 아침!", "스페인어로 인사해볼까요? ¡Buenos días!", "greeting"])
+    scheduler.add_job(send_push, "cron", hour=9, minute=0, id="default_new_learning", replace_existing=True,
+                      args=["📚 새 학습 시간", "오늘의 스페인어 수업을 시작해요!", "new_learning"])
+    scheduler.add_job(send_push, "cron", hour=21, minute=0, id="default_diary", replace_existing=True,
+                      args=["📔 일기 쓰기", "오늘 하루를 스페인어로 기록해봐요", "diary"])
 
 app.add_middleware(
     CORSMiddleware,
@@ -183,13 +242,8 @@ async def stream_ollama(messages: list):
 async def startup():
     await init_db()
     await seed_learning_items()
-    scheduler.add_job(send_push, "cron", hour=6, minute=0,
-                      args=["🌅 좋은 아침!", "스페인어로 인사해볼까요? ¡Buenos días!", "greeting"])
-    scheduler.add_job(send_push, "cron", hour=9, minute=0,
-                      args=["📚 새 학습 시간", "오늘의 스페인어 수업을 시작해요!", "new_learning"])
-    scheduler.add_job(send_push, "cron", hour=21, minute=0,
-                      args=["📔 일기 쓰기", "오늘 하루를 스페인어로 기록해봐요", "diary"])
     scheduler.start()
+    await refresh_scheduler()
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -573,3 +627,51 @@ async def progress_stats(user_id: str = Depends(get_current_user)):
         today_reviewed=today_reviewed,
         streak_days=streak,
     )
+
+
+# ── 루틴 CRUD ────────────────────────────────────────────────────────
+
+@app.get("/routines", response_model=list[Routine])
+async def list_routines(user_id: str = Depends(get_current_user)):
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+        async with db.execute(
+            "SELECT * FROM routines WHERE user_id = ? ORDER BY hour, minute",
+            (user_id,),
+        ) as cur:
+            rows = await cur.fetchall()
+    return [Routine(**r) for r in rows]
+
+
+@app.post("/routines", response_model=Routine, status_code=201)
+async def create_routine(req: RoutineCreate, user_id: str = Depends(get_current_user)):
+    async with get_db() as db:
+        db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
+        await db.execute(
+            """INSERT INTO routines (user_id, learning_type, hour, minute, days_of_week, is_active)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (user_id, req.learning_type, req.hour, req.minute,
+             json.dumps(req.days_of_week), 1 if req.is_active else 0),
+        )
+        await db.commit()
+        async with db.execute(
+            "SELECT * FROM routines WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,)
+        ) as cur:
+            row = await cur.fetchone()
+
+    await refresh_scheduler()
+    return Routine(**row)
+
+
+@app.delete("/routines/{routine_id}", status_code=204)
+async def delete_routine(routine_id: int, user_id: str = Depends(get_current_user)):
+    async with get_db() as db:
+        async with db.execute(
+            "SELECT id FROM routines WHERE id = ? AND user_id = ?", (routine_id, user_id)
+        ) as cur:
+            if not await cur.fetchone():
+                raise HTTPException(status_code=404, detail="루틴을 찾을 수 없습니다")
+        await db.execute("DELETE FROM routines WHERE id = ?", (routine_id,))
+        await db.commit()
+
+    await refresh_scheduler()
